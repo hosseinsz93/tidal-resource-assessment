@@ -1,0 +1,23 @@
+name: resource-assesment
+channels:
+  - conda-forge
+dependencies:
+  - python=3.11
+  - pip
+  - numpy
+  - pandas>=2.1
+  - matplotlib
+  - scipy
+  - scikit-learn
+  - openpyxl
+  - windrose
+  - jupyterlab
+  - notebook
+  - ipykernel
+  - ipywidgets
+  - nbformat
+  - nbclient
+  - pytest
+  - nbconvert
+  - pip:
+      - mat-io==1.0.0
