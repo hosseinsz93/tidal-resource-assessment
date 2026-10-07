@@ -9,12 +9,12 @@ indicates unavailable or disabled optional analyses. All calculations remain in 
 | --- | --- |
 | flowVisualized.py | All six views: mean speeds/direction compass, signed time series, components, phase histograms/box plots, current rose, tidal series/histogram |
 | principal_flood_ebb_calculation.ipynb | Axis and covariance ellipse, signed PDF/CDF, dominant bearings, profile/depth-mean peaks, per-bin peaks, hours/percent above cut-in |
-| tidal-cycles.ipynb | Global/phase/event PCU, event duration/RMS/peaks, normalized cycles with zero-offset cosine and Pearson statistics, cosine view, single-peak power fits with alpha/beta/U, event profiles, normalized phase-mean log fits and friction parameters |
-| TI-calculator.ipynb | Original rolling horizontal-speed denominator, raw and noise-corrected TI by bin, pooled across depth, and for the depth-averaged record; profile and phase-comparison plots |
+| tidal-cycles.ipynb | Global/phase/event PCU, event duration/RMS/peaks, normalized cycles with zero-offset cosine and Pearson statistics, cosine view, single-peak power fits with alpha/beta/U, event-profile and phase-mean log-fit tables (no figure), and friction parameters |
+| TI-calculator.ipynb | Original rolling horizontal-speed denominator, raw and noise-corrected TI by bin, pooled across depth, and for the depth-averaged record; profile plot. Pooled and depth-averaged phase TI remain tables only |
 | adcp_aep_pcu_iec.ipynb | Power curve, hub probabilities, per-speed-bin AEP, unconditional signed flood/ebb probabilities, turbine/farm annual and observed-period energy, period-scaled annual estimate |
 | orientation-correction.ipynb | Deployment/combined circular and arithmetic directions, configured offsets, before/after axis comparison, phase bearings and separate ebb/flood polar plots |
 | coops-data.ipynb | Optional annual prediction-event tables, station time series; normalized-cycle and cosine-fit tables (no figure) |
-| MATLAB / inputs02 cosine prototypes | Full-record 12 h 25 min harmonic, amplitude/phase, fit statistics, observed/fitted series and residuals |
+| MATLAB / inputs02 cosine prototypes | Full-record 12 h 25 min harmonic, amplitude/phase, fit statistics, observed/fitted series and residuals (tables only) |
 
 ## Definitions and explicit differences
 

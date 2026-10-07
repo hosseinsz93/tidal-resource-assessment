@@ -3,6 +3,21 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 COLORS = {"FLOOD": "#D62728", "EBB": "#1F77B4", "SLACK": "#808080", "MISSING": "#222222"}
+FIGURE_ORDER = ("_TimeSeries", "velocity_components", "_Statistics", "current_rose", "current_rose_ebb_flood",
+                "tidal_cycles", "cycle_cosine_view", "_FlowSummary", "principal_flow_diagnostics", "Velocity_profiles",
+                "TI_original_profiles", "ebb_flood_probabilities", "turbine_power_curve", "energy_contributions",
+                "farm_energy", "annual_comparison")
+SOURCE_LABELS = {"coops": "NOAA CO-OPS", "verdant": "Verdant Power", "standard_csv": "Standard CSV"}
+
+
+def figure_prefix(cfg, source=None):
+    """Name the series being drawn. Verdant titles follow the source, not a CO-OPS station id left in site."""
+    key = cfg.source if source is None else source
+    label = SOURCE_LABELS.get(key, str(key).replace("_", " ").title())
+    if key == "verdant":
+        return label
+    site = (getattr(cfg, "site", "") or "").strip()
+    return f"{label} · {site}" if site else label
 
 
 def style():
@@ -14,11 +29,11 @@ def style():
 def save_figures(assessment, directory):
     style()
     tables, cfg = assessment.tables, assessment.settings
-    avg, profiles = tables["depth_averaged"], tables["profiles"]
+    avg = tables["depth_averaged"]
     paths = {}
 
     def save(name, fig):
-        fig.suptitle(f"{cfg.site} · {name.replace('_', ' ').title()}")
+        fig.suptitle(f"{figure_prefix(cfg)} · {name.replace('_', ' ').title()}")
         fig.tight_layout()
         path = directory / f"{name}.png"
         fig.savefig(path, dpi=160, bbox_inches="tight")
@@ -70,54 +85,6 @@ def save_figures(assessment, directory):
         ax.legend()
         save("tidal_cycles", fig)
 
-    if len(profiles):
-        fig, axs = plt.subplots(1, 2, figsize=(10, 5))
-        for phase in ("FLOOD", "EBB"):
-            sub = profiles[profiles.phase == phase].sort_values("depth_m")
-            axs[0].plot(sub.mean_along_mps, sub.depth_m, "o-", color=COLORS[phase], label=phase.title())
-            variation = tables["variability_by_bin"]
-            variation = variation[variation.phase == phase].sort_values("depth_m")
-            axs[1].plot(variation.residual_intensity_percent, variation.depth_m, "o-", color=COLORS[phase], label=phase.title())
-        refs = assessment.dataset.data.depth_reference.unique()
-        label = {"above_bed": "Height above bed (m)", "below_surface": "Depth below surface (m)", "unknown": "Reported bin depth (m; datum unconfirmed)"}.get(refs[0], "Bin coordinate (m)")
-        for ax in axs:
-            ax.set_ylabel(label)
-            ax.legend()
-            if len(refs) == 1 and refs[0] == "below_surface":
-                ax.invert_yaxis()
-        axs[0].set_xlabel("Signed phase-mean along velocity (m/s)")
-        axs[1].set_xlabel("Rolling-residual intensity (%)")
-        save("profiles_and_variability", fig)
-
-    fitted = tables["profile_fit_curves"]
-    peaks = tables["event_peak_profiles"]
-    if len(peaks):
-        fig, axs = plt.subplots(1, 2, figsize=(10, 5), sharey=True)
-        for ax, phase in zip(axs, ("EBB", "FLOOD")):
-            subset = peaks[peaks.phase == phase]
-            for _, event in subset.groupby("event_id"):
-                event = event.sort_values("depth_m")
-                ax.plot(event.along_mps, event.depth_m, color=COLORS[phase], alpha=0.2, lw=0.7)
-            ax.set(title=f"{phase.title()} · {subset.event_id.nunique()} events", xlabel="Signed along velocity (m/s)")
-        refs = assessment.dataset.data.depth_reference.unique()
-        axs[0].set_ylabel({"above_bed": "Height above bed (m)", "below_surface": "Depth below surface (m)"}.get(refs[0], "Reported bin depth (m; datum unconfirmed)"))
-        if len(refs) == 1 and refs[0] == "below_surface":
-            axs[0].invert_yaxis()
-        save("event_peak_profiles", fig)
-    if len(fitted):
-        fig, axs = plt.subplots(1, 2, figsize=(10, 5), sharey=True)
-        for ax, phase in zip(axs, ("EBB", "FLOOD")):
-            sub = profiles[profiles.phase == phase]
-            ax.scatter(sub.mean_along_mps, sub.height_above_bed_m, color=COLORS[phase], label="Phase mean")
-            for model, line in fitted[fitted.phase == phase].groupby("model"):
-                line = line.sort_values("height_above_bed_m")
-                ax.plot((-1 if phase == "EBB" else 1)*line.predicted_speed_mps, line.height_above_bed_m, label=model.title(),
-                        color="tab:orange" if model == "log" else "k", ls="--" if model == "log" else "-")
-            ax.set(title=phase.title(), xlabel="Signed along velocity (m/s)")
-            ax.legend()
-        axs[0].set_ylabel("Height above bed (m)")
-        save("profile_fits", fig)
-
     if "energy_bins" in tables:
         bins = tables["energy_bins"]
         fig, axs = plt.subplots(1, 2, figsize=(10, 4))
@@ -140,4 +107,5 @@ def save_figures(assessment, directory):
     if "postprocessing_catalog" in tables:
         from .original_plots import save_original_figures
         paths.update(save_original_figures(assessment, directory))
-    return paths
+    rank = {name: i for i, name in enumerate(FIGURE_ORDER)}
+    return dict(sorted(paths.items(), key=lambda item: rank.get(item[0], len(rank))))

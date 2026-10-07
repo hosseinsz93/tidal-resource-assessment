@@ -154,11 +154,13 @@ def test_notebook_presets_and_run_log_restore(tmp_path):
     cfg = panel.get_settings()
     assert cfg.excluded_bins == (45, 46, 47, 48, 49)
     assert cfg.time_zone == "UTC"
+    assert cfg.ensemble_minutes == 10
     restored = Settings(**json.loads(json.dumps(cfg.to_dict())))
     restored_panel = SetupPanel(tmp_path, restored)
     assert restored_panel.get_settings() == cfg
     panel.controls["source"].value = "coops"
     assert panel.get_settings().excluded_bins == ()
+    assert panel.get_settings().ensemble_minutes == 60
 
 
 def test_settings_snapshot_and_low_coverage_guard(tmp_path):

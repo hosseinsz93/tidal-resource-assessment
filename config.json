@@ -2,7 +2,7 @@
   "data_and_quality": {
     "source": "verdant",
     "site": "LIS1016",
-    "input_path": "inputs/verdant/depth_bins",
+    "input_path": "inputs/verdant/",
     "time_zone": "EST",
     "coops_depth_reference": "unknown",
     "verdant_sheets": [
@@ -26,7 +26,7 @@
     "min_cycle_hours": 6.0,
     "max_cycle_hours": 18.0,
     "ensemble_minutes": 60,
-    "noise_std_mps": 0.0,
+    "noise_std_mps": 0.1,
     "near_bed_fraction": 0.2,
     "profile_coordinate_mode": "legacy_normalized"
   },

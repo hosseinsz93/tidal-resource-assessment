@@ -24,6 +24,7 @@ bearing, depth metadata and turbine assumptions):
 | time_zone | `unspecified` | `UTC` | Actual timestamp reference |
 | excluded_bins | `[]` | `[45,46,47,48,49]` | Reviewed exclusions |
 | water_depth_m | `37.8` (124 ft) | `26.9` (Station B) or `24.0` (Station A) | Confirmed site depth or `null` |
+| ensemble_minutes | `60` | `10` | Instrument ensemble length |
 | hub_bin | `13` | `13` | Existing selected bin |
 
 Verdant sheet names and heading offsets are already present in the global file. Parameters
@@ -112,7 +113,7 @@ omitted optional fields use backend defaults. Slack is derived from cut-in, not 
 | smooth_samples | Positive integer window for phase-classification smoothing |
 | gap_factor | Gap threshold relative to nominal sampling interval; greater than 1 |
 | min_cycle_hours, max_cycle_hours | Accepted full-cycle duration range in hours |
-| ensemble_minutes | Rolling residual window in minutes; positive integer |
+| ensemble_minutes | Rolling residual window in minutes; positive integer. Use `60` for CO-OPS and `10` for Verdant; the current `config.json` is Verdant, so it is `10` |
 | noise_std_mps | Supplied velocity-noise standard deviation in m/s; zero if not estimated |
 | near_bed_fraction | Maximum z/h for physical log fit, (0,1]; legacy mode may expand it |
 | profile_coordinate_mode | `legacy_normalized` or `physical`; inferred legacy coordinates are not measured z/h |

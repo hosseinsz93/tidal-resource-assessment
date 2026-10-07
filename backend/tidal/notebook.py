@@ -136,6 +136,8 @@ class SetupPanel:
         # Source-specific geometry and excluded bins must not silently carry over.
         self.controls["water_depth_m"].value = {"coops": "37.8", "verdant": "26.9"}.get(change["new"], "")
         self.controls["excluded_bins"].value = "45, 46, 47, 48, 49" if change["new"] == "verdant" else ""
+        if change["new"] in {"coops", "verdant"}:
+            self.controls["ensemble_minutes"].value = 60 if change["new"] == "coops" else 10
 
     def get_settings(self):
         if self.widget is None:

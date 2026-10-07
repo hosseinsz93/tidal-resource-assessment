@@ -136,7 +136,7 @@ def profile_coordinates(resolved, cfg, kind):
 
 
 def historical_profile_fits(avg, resolved, cfg):
-    """Restore single record-peak power fits and phase-mean normalized log fits."""
+    """Single record-peak power and log fits, plus phase-mean normalized log fits."""
     peak_grid = profile_coordinates(resolved, cfg, "peak_power")
     log_grid = profile_coordinates(resolved, cfg, "phase_log")
     curves, fits = [], []
@@ -144,7 +144,7 @@ def historical_profile_fits(avg, resolved, cfg):
         subset = resolved[resolved.phase == phase]
         valid = subset.dropna(subset=["speed_mps"])
         if valid.empty:
-            for model in ("peak_power", "phase_log"):
+            for model in ("peak_power", "peak_log", "phase_log"):
                 fits.append({"phase": phase, "model": model, "status": "no phase samples"})
             continue
         peak_time = valid.loc[valid.speed_mps.idxmax(), "time"]
@@ -155,13 +155,14 @@ def historical_profile_fits(avg, resolved, cfg):
             U = peak.speed_mps.mean()
         for model, frame, reference in (
             ("peak_power", peak, U),
+            ("peak_log", peak, U),
             ("phase_log", subset.groupby("bin", as_index=False).agg(speed_mps=("along_mps", "mean")).assign(
                 speed_mps=lambda x: x.speed_mps.abs()).merge(log_grid, on="bin", suffixes=("", "_grid")), subset.along_mps.abs().mean()),
         ):
             x, y = frame.eta.to_numpy(), frame.speed_mps.to_numpy()
             good = np.isfinite(x) & np.isfinite(y) & (x > 0) & (y > 0)
             row = {"phase": phase, "model": model, "reference_U_mps": reference,
-                   "peak_time": peak_time if model == "peak_power" else pd.NaT,
+                   "peak_time": peak_time if model.startswith("peak_") else pd.NaT,
                    "coordinate_basis": frame.coordinate_basis.iloc[0], "status": "insufficient coordinates or positive speeds"}
             predicted = np.full(len(frame), np.nan)
             chosen = good.copy()
@@ -377,20 +378,20 @@ def annual_comparisons(root, cfg):
 
 
 CATALOG = [
-    ("MATLAB / inputs02 cosine prototypes", "Full-record fixed 12 h 25 min cosine and residuals", "fixed_period_cosine_fit", "_CosineFit"),
+    ("MATLAB / inputs02 cosine prototypes", "Full-record fixed 12 h 25 min cosine and residuals", "fixed_period_cosine_fit", "(table only)"),
     ("flowVisualized.py", "Mean speeds and dominant-direction compass", "dominant_directions", "_FlowSummary"),
     ("flowVisualized.py", "Signed time series and velocity components", "depth_averaged", "_TimeSeries"),
     ("flowVisualized.py", "Phase histograms and magnitude box plots", "phase_statistics", "_Statistics"),
     ("flowVisualized.py", "Current rose", "depth_averaged", "current_rose"),
     ("principal_flood_ebb_calculation.ipynb", "Ellipse, signed PDF and CDF", "signed_velocity_distribution", "principal_flow_diagnostics"),
     ("principal_flood_ebb_calculation.ipynb", "Peaks and hours above cut-in", "resource_metrics", "(table only)"),
-    ("tidal-cycles.ipynb", "Global, phase and event PCU summaries", "pcu_summary", "phase_pcu_comparison"),
-    ("tidal-cycles.ipynb", "Per-event axes, duration, RMS and peak PCU", "tidal_events", "event_diagnostics"),
+    ("tidal-cycles.ipynb", "Global, phase and event PCU summaries", "pcu_summary", "(table only)"),
+    ("tidal-cycles.ipynb", "Per-event axes, duration, RMS and peak PCU", "tidal_events", "(table only)"),
     ("tidal-cycles.ipynb", "Normalized cycles and cosine view", "cycle_original_fit", "cycle_cosine_view"),
-    ("tidal-cycles.ipynb", "Single peak ebb/flood power fits and alpha/beta", "original_profile_fits", "peak_power_profiles"),
-    ("tidal-cycles.ipynb", "Event profiles and phase-mean normalized log fits", "original_profile_curves", "event_profiles_and_log_fit"),
+    ("tidal-cycles.ipynb", "Single peak ebb/flood power (alpha/beta) and log (u*, z0/h) fits", "original_profile_fits", "Velocity_profiles"),
+    ("tidal-cycles.ipynb", "Event profiles and phase-mean normalized log fits", "original_profile_curves", "(table only)"),
     ("TI-calculator.ipynb", "Original raw and corrected TI by bin", "ti_original_by_bin", "TI_original_profiles"),
-    ("TI-calculator.ipynb", "Pooled-depth and depth-averaged phase TI", "ti_original_depth_pooled", "TI_original_phase_comparison"),
+    ("TI-calculator.ipynb", "Pooled-depth and depth-averaged phase TI", "ti_original_depth_pooled", "(table only)"),
     ("adcp_aep_pcu_iec.ipynb", "Power curve, hub probabilities and AEP bins", "energy_bins", "energy_contributions"),
     ("adcp_aep_pcu_iec.ipynb", "Unconditional signed ebb/flood probabilities", "site_probabilities_ebb_flood", "ebb_flood_probabilities"),
     ("adcp_aep_pcu_iec.ipynb", "Farm annual and observed-period energy", "farm_energy_summary", "farm_energy"),

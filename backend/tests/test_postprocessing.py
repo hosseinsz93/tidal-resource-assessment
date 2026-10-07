@@ -3,8 +3,16 @@ import numpy as np
 import pandas as pd
 import pytest
 from backend.tidal import preprocess, process
+from backend.tidal.config import Settings
+from backend.tidal.plots import figure_prefix
 from backend.tidal.postprocessing import fixed_period_cosine, original_ti
 from test_analysis import synthetic
+
+
+def test_figure_titles_follow_the_data_source():
+    assert figure_prefix(Settings(source="verdant", site="LIS1016")) == "Verdant Power"
+    assert figure_prefix(Settings(source="coops", site="LIS1016")) == "NOAA CO-OPS · LIS1016"
+    assert figure_prefix(Settings(source="standard_csv", site="MySite")) == "Standard CSV · MySite"
 
 
 def test_fixed_period_model_recovers_amplitude_and_phase():
@@ -40,6 +48,9 @@ def test_restored_profiles_resource_metrics_and_distributions(tmp_path):
     fits = t["original_profile_fits"].query("model == 'peak_power'")
     np.testing.assert_allclose(fits.alpha, 5, rtol=1e-6)
     assert fits.status.eq("ok").all()
+    log_fits = t["original_profile_fits"].query("model == 'peak_log'")
+    assert len(log_fits) == 2 and log_fits.status.eq("ok").all()
+    assert (log_fits.u_star_mps > 0).all() and log_fits.z0_over_h.between(0, 1).all()
     all_metrics = t["resource_metrics"].query("phase == 'ALL'").iloc[0]
     profile = t["profile_speed_time_series"]
     expected = profile.loc[profile.peak_profile_speed_mps >= cfg.cut_in_mps, "weight_s"].sum()/3600
