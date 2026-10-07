@@ -384,6 +384,7 @@ CATALOG = [
     ("flowVisualized.py", "Phase histograms and magnitude box plots", "phase_statistics", "_Statistics"),
     ("flowVisualized.py", "Current rose", "depth_averaged", "current_rose"),
     ("principal_flood_ebb_calculation.ipynb", "Ellipse, signed PDF and CDF", "signed_velocity_distribution", "principal_flow_diagnostics"),
+    ("Consolidated workflow", "Bin-level polar velocity, principal axis and phase directions", "depth_resolved", "tidal_velocity_polar"),
     ("principal_flood_ebb_calculation.ipynb", "Peaks and hours above cut-in", "resource_metrics", "(table only)"),
     ("tidal-cycles.ipynb", "Global, phase and event PCU summaries", "pcu_summary", "(table only)"),
     ("tidal-cycles.ipynb", "Per-event axes, duration, RMS and peak PCU", "tidal_events", "(table only)"),

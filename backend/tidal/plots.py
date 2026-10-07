@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 
 COLORS = {"FLOOD": "#D62728", "EBB": "#1F77B4", "SLACK": "#808080", "MISSING": "#222222"}
 FIGURE_ORDER = ("_TimeSeries", "velocity_components", "_Statistics", "current_rose", "current_rose_ebb_flood",
-                "tidal_cycles", "cycle_cosine_view", "_FlowSummary", "principal_flow_diagnostics", "Velocity_profiles",
+                "tidal_cycles", "cycle_cosine_view", "_FlowSummary", "principal_flow_diagnostics", "tidal_velocity_polar", "Velocity_profiles",
                 "TI_original_profiles", "ebb_flood_probabilities", "turbine_power_curve", "energy_contributions",
                 "farm_energy", "annual_comparison")
 SOURCE_LABELS = {"coops": "NOAA CO-OPS", "verdant": "Verdant Power", "standard_csv": "Standard CSV"}

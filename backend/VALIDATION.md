@@ -1,5 +1,12 @@
 # Consolidation validation — 29 September 2026
 
+7 October 2026 polar-figure revision: 32 tests pass. The new `tidal_velocity_polar`
+figure was rendered and visually inspected with CO-OPS LIS1016 and Verdant Stations A
+and B. The standard figure exporter was also checked to place it immediately after
+`principal_flow_diagnostics`. Source-specific titles, true-bearing axis labels, phase
+directions, mean speeds, bounded deterministic display sampling, and full-record summary
+calculations were verified.
+
 Latest JSON-configuration revision: 29 tests pass, including example loading, inline curve
 points, invalid types, unknown/duplicate keys and cut-in/slack conflicts. Complete CO-OPS
 and Verdant notebook executions passed using their respective `inputs/config/*.json` files.

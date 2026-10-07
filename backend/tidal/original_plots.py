@@ -4,17 +4,61 @@ import matplotlib.pyplot as plt
 from .plots import COLORS, figure_prefix
 
 
+def _cardinal_direction(angle):
+    points = ("N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE",
+              "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW")
+    return points[int((float(angle) % 360 + 11.25) // 22.5) % 16]
+
+
+def _polar_title(cfg):
+    if cfg.source != "verdant":
+        return f"{figure_prefix(cfg)} · Tidal Velocity Polar Plot"
+    stations = []
+    for sheet in cfg.verdant_sheets:
+        station = str(sheet).strip()
+        if station.endswith("-2"):
+            station = station[:-2]
+        if station and station not in stations:
+            stations.append(station)
+    suffix = f" ({' / '.join(stations)})" if stations else ""
+    return f"Verdant Power · Tidal Velocity Polar Plot{suffix}"
+
+
+def _phase_polar_statistics(resolved, bearing):
+    """Summaries for the polar plot from canonical, source-independent columns."""
+    rows = []
+    for phase in ("FLOOD", "EBB"):
+        sub = resolved.loc[resolved.phase.eq(phase)].dropna(subset=["direction_degT", "speed_mps"])
+        angles = np.deg2rad(sub.direction_degT.to_numpy(dtype=float))
+        resultant = np.hypot(np.sin(angles).mean(), np.cos(angles).mean()) if len(angles) else 0
+        direction = (np.degrees(np.arctan2(np.sin(angles).mean(), np.cos(angles).mean())) % 360
+                     if len(angles) and resultant > 1e-10 else np.nan)
+        rows.append({"phase": phase, "samples": len(sub), "direction_degT": direction,
+                     "mean_speed_mps": sub.speed_mps.mean()})
+    return float(bearing) % 180, rows
+
+
+def _display_sample(frame, limit=30000):
+    """Even deterministic sample for readable, bounded-size scatter rendering."""
+    if len(frame) <= limit:
+        return frame
+    return frame.iloc[np.linspace(0, len(frame)-1, limit, dtype=int)]
+
+
 def save_original_figures(assessment, directory):
     t, cfg = assessment.tables, assessment.settings
     avg = t["depth_averaged"]
     paths = {}
 
-    def save(name, fig, note=None, prefix=None):
+    def save(name, fig, note=None, prefix=None, title=None, polar_layout=False):
         heading = figure_prefix(cfg) if prefix is None else prefix
-        fig.suptitle(f"{heading} · {name.strip('_').replace('_', ' ')}")
+        fig.suptitle(title or f"{heading} · {name.strip('_').replace('_', ' ')}")
         if note:
             fig.text(.5, .01, note, ha="center", fontsize=8)
-        fig.tight_layout(rect=(0, .035 if note else 0, 1, .97))
+        if polar_layout:
+            fig.subplots_adjust(left=.05, right=.72, bottom=.09, top=.88)
+        else:
+            fig.tight_layout(rect=(0, .035 if note else 0, 1, .97))
         path = directory / f"{name}.png"
         fig.savefig(path, dpi=160, bbox_inches="tight")
         plt.close(fig)
@@ -99,6 +143,69 @@ def save_original_figures(assessment, directory):
         for sign in (-1, 1):
             ax.axvline(sign*cfg.slack_mps, color="0.4", ls="--")
     save("principal_flow_diagnostics", fig)
+
+    # Source-independent bin-level velocity polar plot. Phase labels are inherited
+    # from the same depth-averaged classification used throughout the workflow.
+    resolved = t["depth_resolved"]
+    polar = resolved.loc[resolved.phase.isin(["FLOOD", "EBB"])].dropna(
+        subset=["direction_degT", "speed_mps"])
+    axis_deg, phase_rows = _phase_polar_statistics(polar, assessment.bearing)
+    phase_stats = {row["phase"]: row for row in phase_rows}
+    fig, ax = plt.subplots(figsize=(12, 9), subplot_kw={"projection": "polar"})
+    displayed = 0
+    for phase in ("FLOOD", "EBB"):
+        full = polar.loc[polar.phase.eq(phase)]
+        shown = _display_sample(full)
+        displayed += len(shown)
+        ax.scatter(np.deg2rad(shown.direction_degT), shown.speed_mps, s=7, alpha=.28,
+                   color=COLORS[phase], edgecolors="none", rasterized=True,
+                   label=f"{phase.title()} (ADCP bin data)", zorder=3)
+    maximum = float(polar.speed_mps.max()) if len(polar) else 0
+    radius = max(maximum*1.08, .1)
+    axis_angle = np.deg2rad(axis_deg)
+    ax.plot([axis_angle, axis_angle], [0, radius], "k-.", lw=1.5,
+            label=f"Principal axis ({axis_deg:.1f}°)", zorder=2)
+    ax.plot([axis_angle+np.pi, axis_angle+np.pi], [0, radius], "k-.", lw=1.5, zorder=2)
+    for phase in ("FLOOD", "EBB"):
+        row = phase_stats[phase]
+        direction = row["direction_degT"]
+        if not np.isfinite(direction):
+            continue
+        angle = np.deg2rad(direction)
+        length = radius*.88
+        ax.annotate("", xy=(angle, length), xytext=(angle, 0),
+                    arrowprops={"arrowstyle": "-|>", "color": COLORS[phase],
+                                "lw": 2.2, "mutation_scale": 18}, zorder=5)
+        ax.text(angle, length*1.04, f"{direction:.1f}°", color=COLORS[phase],
+                fontsize=10, fontweight="bold", ha="center", va="center")
+        ax.plot([], [], color=COLORS[phase], lw=2.2,
+                label=f"{phase.title()} mean direction ({direction:.1f}°)")
+    ax.set_theta_zero_location("N")
+    ax.set_theta_direction(-1)
+    bearings = np.arange(0, 360, 30)
+    ax.set_xticks(np.deg2rad(bearings), [f"{value}°" for value in bearings])
+    ax.set_ylim(0, radius)
+    radial_ticks = np.linspace(radius/4, radius, 4)
+    ax.set_rticks(radial_ticks)
+    ax.set_yticklabels([f"{value:.1f} m/s" for value in radial_ticks])
+    ax.set_rlabel_position(78)
+    ax.grid(True, color="0.45", ls="--", lw=.7, alpha=.75)
+    ax.legend(loc="upper left", bbox_to_anchor=(1.03, 1.08), fontsize=9,
+              frameon=True, fancybox=False)
+    flood, ebb = phase_stats["FLOOD"], phase_stats["EBB"]
+    summary = [f"Principal axis: {axis_deg:.1f}° "
+               f"({_cardinal_direction(axis_deg)}–{_cardinal_direction(axis_deg+180)})"]
+    for label, row in (("Flood", flood), ("Ebb", ebb)):
+        direction = row["direction_degT"]
+        summary.append(f"{label} direction: {direction:.1f}° ({_cardinal_direction(direction)})"
+                       if np.isfinite(direction) else f"{label} direction: unavailable")
+        summary.append(f"Mean {label.lower()} speed: {row['mean_speed_mps']:.2f} m/s"
+                       if np.isfinite(row["mean_speed_mps"]) else f"Mean {label.lower()} speed: unavailable")
+    fig.text(.75, .12, "\n".join(summary), ha="left", va="bottom", fontsize=10, linespacing=1.35)
+    note = "Radius: horizontal speed; angles: degrees true"
+    if displayed < len(polar):
+        note += f"; evenly displayed {displayed:,} of {len(polar):,} valid bin records"
+    save("tidal_velocity_polar", fig, note=note, title=_polar_title(cfg), polar_layout=True)
 
     comparison = t["cycle_comparison"]
     if len(comparison):

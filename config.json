@@ -37,7 +37,11 @@
     "rated_speed_mps": 1.5,
     "cut_out_mps": 3.2,
     "rated_kw": 110.0,
-    "power_curve_mode": "edited",
+    "rotor_diameter_m": null,
+    "power_coefficient": 0.40,
+    "drivetrain_efficiency": 0.90,
+    "water_density_kgm3": 1025.0,
+    "power_curve_mode": "generated",
     "power_curve": "inputs/turbine/power_curve_generated.csv",
     "power_curve_points": [
       [0, 0],

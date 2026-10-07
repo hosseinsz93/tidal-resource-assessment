@@ -128,7 +128,11 @@ omitted optional fields use backend defaults. Slack is derived from cut-in, not 
 | rated_speed_mps | Rated speed, m/s; must lie strictly between cut-in and cut-off |
 | cut_out_mps | Cut-off speed, m/s; power is zero at and above it |
 | rated_kw | Positive rated turbine power, kW; supplied curve must not exceed it |
-| power_curve_mode | `csv`, `edited`, or `generated` |
+| power_curve_mode | `csv`, `edited`, or `generated`. `generated` uses P = ½ρAC<sub>p</sub>ηU³ from cut-in to rated, rated power up to cut-out, zero elsewhere |
+| rotor_diameter_m | Rotor diameter, m (`generated` only). With a value, rated speed is computed from rated power; `null` derives the swept area from rated power at `rated_speed_mps` |
+| power_coefficient | Hydrodynamic C<sub>p</sub>, at most the Betz limit 16/27; typically 0.35–0.45 |
+| drivetrain_efficiency | Gearbox, generator and power-electronics efficiency η, in (0, 1]; typically 0.90–0.95 |
+| water_density_kgm3 | Seawater density ρ, kg/m³ (1025 typical) |
 | power_curve | CSV path used only in `csv` mode; columns `speed_mps,power_kw` |
 | power_curve_points | Array of `[speed_mps, power_kw]` pairs, used only in `edited` mode |
 | speed_bin_width | Positive speed-bin width for energy integration, m/s |

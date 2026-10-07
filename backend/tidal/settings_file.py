@@ -70,7 +70,7 @@ def load_settings(root, path="config.json"):
             continue
         default = getattr(defaults, key)
         valid = False
-        if key == "water_depth_m":
+        if key in ("water_depth_m", "rotor_diameter_m"):
             valid = value is None or (isinstance(value, (int, float)) and not isinstance(value, bool))
         elif isinstance(default, bool):
             valid = isinstance(value, bool)

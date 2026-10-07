@@ -18,7 +18,7 @@ def test_examples_and_edited_points(tmp_path):
     root = Path(__file__).resolve().parents[2]
     coops = load_settings(root)
     assert coops.slack_mps == coops.cut_in_mps
-    assert coops.power_curve_mode == "edited"
+    assert coops.power_curve_mode == "generated"
     assert power_curve(root, coops).power_kw.max() == coops.rated_kw
     path = write_config(tmp_path, energy_enabled=True, power_curve_mode="edited",
                         power_curve_points=[[0,0],[2,100],[3.2,100]], cut_in_mps=.6)

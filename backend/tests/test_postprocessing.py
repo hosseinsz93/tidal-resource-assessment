@@ -4,7 +4,8 @@ import pandas as pd
 import pytest
 from backend.tidal import preprocess, process
 from backend.tidal.config import Settings
-from backend.tidal.plots import figure_prefix
+from backend.tidal.plots import figure_prefix, FIGURE_ORDER
+from backend.tidal.original_plots import _cardinal_direction, _phase_polar_statistics, _polar_title
 from backend.tidal.postprocessing import fixed_period_cosine, original_ti
 from test_analysis import synthetic
 
@@ -13,6 +14,27 @@ def test_figure_titles_follow_the_data_source():
     assert figure_prefix(Settings(source="verdant", site="LIS1016")) == "Verdant Power"
     assert figure_prefix(Settings(source="coops", site="LIS1016")) == "NOAA CO-OPS · LIS1016"
     assert figure_prefix(Settings(source="standard_csv", site="MySite")) == "Standard CSV · MySite"
+    assert _polar_title(Settings(source="verdant", verdant_sheets=("Station A", "Station A-2"))) == \
+        "Verdant Power · Tidal Velocity Polar Plot (Station A)"
+    assert _polar_title(Settings(source="verdant", verdant_sheets=("Station B", "Station B-2"))) == \
+        "Verdant Power · Tidal Velocity Polar Plot (Station B)"
+    assert _polar_title(Settings(source="coops", site="LIS1016")) == \
+        "NOAA CO-OPS · LIS1016 · Tidal Velocity Polar Plot"
+    assert FIGURE_ORDER.index("tidal_velocity_polar") == FIGURE_ORDER.index("principal_flow_diagnostics") + 1
+
+
+def test_polar_statistics_use_canonical_vectors_for_any_source():
+    frame = pd.DataFrame({"phase": ["FLOOD", "FLOOD", "EBB", "EBB"],
+                          "direction_degT": [70, 80, 250, 260],
+                          "speed_mps": [1.0, 2.0, 1.2, 1.8]})
+    axis, rows = _phase_polar_statistics(frame, 255)
+    result = pd.DataFrame(rows).set_index("phase")
+    assert axis == pytest.approx(75)
+    assert result.loc["FLOOD", "direction_degT"] == pytest.approx(75)
+    assert result.loc["EBB", "direction_degT"] == pytest.approx(255)
+    assert result.loc["FLOOD", "mean_speed_mps"] == pytest.approx(1.5)
+    assert _cardinal_direction(75) == "ENE"
+    assert _cardinal_direction(255) == "WSW"
 
 
 def test_fixed_period_model_recovers_amplitude_and_phase():
@@ -58,5 +80,5 @@ def test_restored_profiles_resource_metrics_and_distributions(tmp_path):
     hist = t["signed_velocity_distribution"]
     assert np.sum(hist.pdf*(hist.velocity_hi_mps-hist.velocity_lo_mps)) == pytest.approx(1)
     assert t["signed_velocity_cdf"].time_weighted_cdf.iloc[-1] == pytest.approx(1)
-    assert len(t["postprocessing_catalog"]) == 20
+    assert len(t["postprocessing_catalog"]) == 21
     assert t["cycle_original_fit"].iloc[0].r_squared > .999

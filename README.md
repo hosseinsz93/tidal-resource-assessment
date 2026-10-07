@@ -69,7 +69,9 @@ Velocity profiles show negative ebb on the left and positive flood on the right.
 - Phase-mean vertical profiles and separate event-peak profiles; power/log fits when physical height metadata support them.
 - Rolling-residual intensity by depth/phase, with optional supplied instrument-noise variance subtraction.
 - Time-weighted hub-bin speed distributions, power-curve integration and gross turbine/farm AEP.
-- Consistent red flood / blue ebb / grey slack figures, with bin/phase/time exploration.
+- Consistent red flood / blue ebb / grey slack figures, with bin/phase/time exploration. The
+  tidal-velocity polar figure follows the principal-flow diagnostics and shows valid bin vectors,
+  the bidirectional principal axis, phase-mean bearings and phase-mean speeds for every source.
 
 The example flood reference and turbine are specific to Long Island Sound. Check these for a new site. The backend uses named columns rather than legacy positional layouts. Depth averages are arithmetic vector means over measured bins. Sample weights assume ensemble-start timestamps, cap support across large gaps at nominal cadence, and assign one nominal interval to the last record.
 

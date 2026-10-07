@@ -34,6 +34,10 @@ class Settings:
     rated_speed_mps: float = 2.0
     power_curve_mode: str = "csv"
     power_curve_points: str = "speed_mps,power_kw\n0,0\n0.4,0\n2,110\n3.2,110"
+    rotor_diameter_m: float | None = None  # None: implied by rated power at rated speed.
+    power_coefficient: float = 0.40
+    drivetrain_efficiency: float = 0.90
+    water_density_kgm3: float = 1025.0
     cut_in_mps: float = 0.4
     cut_out_mps: float = 3.2
     speed_bin_width: float = 0.1
@@ -78,6 +82,19 @@ class Settings:
             raise ValueError("Flood reference must be finite.")
         if not math.isfinite(self.noise_std_mps) or self.noise_std_mps < 0:
             raise ValueError("Noise standard deviation must be finite and nonnegative.")
+        if not 0 < self.power_coefficient <= 16/27:
+            raise ValueError("Power coefficient must be in (0, 16/27], the Betz limit.")
+        if not 0 < self.drivetrain_efficiency <= 1:
+            raise ValueError("Drivetrain efficiency must be in (0, 1].")
+        if not math.isfinite(self.water_density_kgm3) or self.water_density_kgm3 <= 0:
+            raise ValueError("Water density must be positive and finite.")
+        if self.rotor_diameter_m is not None:
+            if not math.isfinite(self.rotor_diameter_m) or self.rotor_diameter_m <= 0:
+                raise ValueError("Rotor diameter must be positive, or None to derive it from the rated point.")
+            if self.power_curve_mode == "generated":
+                area = math.pi*self.rotor_diameter_m**2/4
+                self.rated_speed_mps = (2e3*self.rated_kw/(self.water_density_kgm3*area*self.power_coefficient
+                                                           * self.drivetrain_efficiency))**(1/3)
         if not (0 <= self.cut_in_mps < self.rated_speed_mps < self.cut_out_mps < float('inf')):
             raise ValueError("Require 0 <= cut-in < rated speed < cut-off.")
         if self.min_cycle_hours >= self.max_cycle_hours or self.gap_factor <= 1:

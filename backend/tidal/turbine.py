@@ -5,6 +5,13 @@ import pandas as pd
 from .config import input_file
 
 
+def rotor_area_m2(cfg):
+    """Swept area from the rotor diameter, or the area implied by rated power at rated speed."""
+    if cfg.rotor_diameter_m is not None:
+        return np.pi*cfg.rotor_diameter_m**2/4
+    return 2e3*cfg.rated_kw/(cfg.water_density_kgm3*cfg.power_coefficient*cfg.drivetrain_efficiency*cfg.rated_speed_mps**3)
+
+
 def power_curve(root, cfg):
     if cfg.power_curve_mode == "csv":
         try:
@@ -17,9 +24,13 @@ def power_curve(root, cfg):
     elif cfg.power_curve_mode == "edited":
         curve = pd.read_csv(StringIO(cfg.power_curve_points))
     else:
-        speeds = np.unique(np.r_[0, np.linspace(cfg.cut_in_mps, cfg.rated_speed_mps, 201), cfg.cut_out_mps])
-        fraction = (speeds**3-cfg.cut_in_mps**3)/(cfg.rated_speed_mps**3-cfg.cut_in_mps**3)
-        curve = pd.DataFrame({"speed_mps": speeds, "power_kw": cfg.rated_kw*np.clip(fraction, 0, 1)})
+        # P = 0.5 rho A Cp eta U^3 between cut-in and rated, rated power up to cut-out (IEC TS 62600-200).
+        below = cfg.cut_in_mps*(1-1e-6)
+        speeds = np.unique(np.r_[0, below, np.linspace(cfg.cut_in_mps, cfg.rated_speed_mps, 201), cfg.cut_out_mps])
+        power = np.minimum(1e-3*0.5*cfg.water_density_kgm3*rotor_area_m2(cfg)*cfg.power_coefficient
+                           * cfg.drivetrain_efficiency*speeds**3, cfg.rated_kw)
+        power[speeds < cfg.cut_in_mps] = 0
+        curve = pd.DataFrame({"speed_mps": speeds, "power_kw": power})
     if not {"speed_mps", "power_kw"}.issubset(curve):
         raise ValueError("Power curve requires speed_mps,power_kw columns.")
     curve = curve[["speed_mps", "power_kw"]].apply(pd.to_numeric, errors="coerce").sort_values("speed_mps")
