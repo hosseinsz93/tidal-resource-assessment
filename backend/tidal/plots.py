@@ -61,7 +61,7 @@ def save_figures(assessment, directory):
     bar = fig.colorbar(plt.cm.ScalarMappable(cmap="jet", norm=plt.Normalize(0, speed_max)), ax=ax, pad=0.1, shrink=0.7)
     bar.set_ticks(np.linspace(0, speed_max, 5))
     bar.set_ticklabels([f"{v:.1f}" for v in np.linspace(0, speed_max, 5)])
-    bar.set_label("Current Speed (m/s)")
+    bar.set_label("Current velocity (m/s)")
     bar.outline.set_visible(False)
     save("current_rose", fig)
 
@@ -81,7 +81,7 @@ def save_figures(assessment, directory):
             ax.plot(members.normalized_time, members[col], color="0.8", lw=0.5)
         ax.plot(ensemble.normalized_time, ensemble.mean_mps, color="k", label="Ensemble mean")
         ax.plot(ensemble.normalized_time, ensemble.fit_mps, color="tab:orange", label="Harmonic fit")
-        ax.set(xlabel="Normalized cycle time", ylabel="Along-channel velocity (m/s)")
+        ax.set(xlabel="Normalized cycle time", ylabel="Streamwise velocity (m/s)")
         ax.legend()
         save("tidal_cycles", fig)
 
@@ -93,12 +93,12 @@ def save_figures(assessment, directory):
         for speed, label in ((cfg.cut_in_mps, "Cut-in"), (cfg.rated_speed_mps, "Rated"), (cfg.cut_out_mps, "Cut-out")):
             ax.axvline(speed, color="0.3", ls="--", lw=0.9)
             ax.text(speed, ax.get_ylim()[1]*0.97, f" {label}", ha="left", va="top", fontsize=9)
-        ax.set(xlabel=f"Hub along-channel speed, bin {cfg.hub_bin} (m/s)",
+        ax.set(xlabel=f"Hub streamwise velocity, bin {cfg.hub_bin} (m/s)",
                ylabel=f"Time-weighted probability p(Uᵢ) (%), ΔU = {cfg.speed_bin_width:g} m/s")
         save("hub_velocity_probability", fig)
         fig, ax = plt.subplots(figsize=(8, 4.5))
         ax.bar(bins.speed_center_mps, bins.annual_kwh/1000, width=width, color="tab:green")
-        ax.set(xlabel=f"Hub along-channel speed, bin {cfg.hub_bin} (m/s)",
+        ax.set(xlabel=f"Hub streamwise velocity, bin {cfg.hub_bin} (m/s)",
                ylabel="AEP contribution (MWh/yr)",
                title=f"Single turbine AEP = 8766 h × Σ p(Uᵢ)·P(Uᵢ) = {bins.annual_kwh.sum()/1000:,.1f} MWh/yr")
         save("energy_contributions", fig)
@@ -112,15 +112,15 @@ def save_figures(assessment, directory):
         ax.plot(speeds, power, color="tab:red", lw=1.8)
         ax.vlines(rated_u, 0, rated_p, color="k", lw=0.8)
         arrow = dict(arrowstyle="->", color="k", lw=0.8)
-        ax.annotate("Cut-in speed", xy=(cin, 0), xytext=(cin, rated_p*0.3), ha="center", arrowprops=arrow)
-        ax.annotate("Rated output speed", xy=(rated_u, rated_p), xytext=(rated_u, rated_p*1.15), ha="center", arrowprops=arrow)
+        ax.annotate("Cut-in velocity", xy=(cin, 0), xytext=(cin, rated_p*0.3), ha="center", arrowprops=arrow)
+        ax.annotate("Rated output velocity", xy=(rated_u, rated_p), xytext=(rated_u, rated_p*1.15), ha="center", arrowprops=arrow)
         ax.annotate("Rated output power", xy=(rated_u*0.97, rated_p), xytext=(cin*0.6, rated_p*1.0),
                     ha="left", va="center", arrowprops=arrow)
-        ax.annotate("Cut-out speed", xy=(cout, rated_p), xytext=(cout*0.82, rated_p*1.15), ha="center", arrowprops=arrow)
+        ax.annotate("Cut-out velocity", xy=(cout, rated_p), xytext=(cout*0.82, rated_p*1.15), ha="center", arrowprops=arrow)
         ax.set_xticks([cin, rated_u, cout])
         ax.set_xticklabels([f"{cin:g}", f"{rated_u:.2g}", f"{cout:g}"])
         ax.set_yticks([])
-        ax.set(xlim=(0, x_max), ylim=(0, rated_p*1.3), xlabel="Steady flow speed (m/s)", ylabel="Power (kW)")
+        ax.set(xlim=(0, x_max), ylim=(0, rated_p*1.3), xlabel="Steady flow velocity (m/s)", ylabel="Power (kW)")
         for side in ("top", "right"):
             ax.spines[side].set_visible(False)
         save("turbine_power_curve", fig)

@@ -10,6 +10,6 @@ All phases use the same flood-oriented axis; resolved rows inherit exact-time la
 
 Physical power/log fits use phase-mean along-channel magnitudes at confirmed bed heights. Peak profiles are exported separately. Power fitting uses log u vs log z; log fitting uses u vs log z over the configured z/h range. R² uses residuals in velocity space. No p-value is fabricated from correlated samples. Missing metadata or insufficient near-bed points produce explicit fit statuses.
 
-Residual intensity uses sample standard deviation of rolling residuals divided by mean absolute along velocity at eligible times. It is sample-weighted within a phase, unlike duration-weighted energy. Noise subtraction defaults to zero; negative corrected variance is clipped with a flag. These ensemble-level statistics are not validated estimates of full turbulence intensity.
+Residual intensity uses sample standard deviation of rolling residuals divided by mean absolute streamwise velocity at eligible times. It is sample-weighted within a phase, unlike duration-weighted energy. Noise subtraction defaults to zero; negative corrected variance is clipped with a flag. These ensemble-level statistics are not validated estimates of full turbulence intensity.
 
 Energy supports one hub bin, one turbine curve, availability and gross turbine-count scaling. Rotor-area averaging, harmonic annual reconstruction, uncertainty propagation, wakes and turbine loads are future extensions, not implicit features.

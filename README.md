@@ -63,7 +63,7 @@ CSV/edited points retain their supplied shape. Cut-in/cut-off apply to every cur
 Velocity profiles show negative ebb on the left and positive flood on the right.
 
 - Unit/metadata validation, duplicate/overlap checks, depth-bin coverage and gap detection.
-- True-bearing channel axes by PCA, doubled-angle directions, or a supplied fixed flood bearing.
+- True-bearing channel axes calculated by PCA or doubled-angle directions; a flood-end hint only labels which end is flood.
 - One phase label per timestamp: positive along-channel = flood; negative = ebb; missing remains missing. Depth-resolved analyses inherit the same label.
 - Gap-aware cycle segmentation, normalized ensemble cycles and harmonic fits.
 - Phase-mean vertical profiles and separate event-peak profiles; power/log fits when physical height metadata support them.

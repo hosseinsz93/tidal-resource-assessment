@@ -5,6 +5,19 @@ import math
 import re
 
 
+# Station-specific Verdant values, selected from verdant_sheets (see CONFIGURATION.md, Verdant stations).
+VERDANT_STATIONS = {
+    ("Station A", "Station A-2"): {"verdant_heading_offsets": (-0.07, 0.04),
+                                   "excluded_bins": (39, 40, 41, 42, 43), "water_depth_m": 24.0},
+    ("Station B", "Station B-2"): {"verdant_heading_offsets": (-5.53, 3.20),
+                                   "excluded_bins": (45, 46, 47, 48, 49), "water_depth_m": 26.9},
+}
+
+
+def verdant_station_preset(sheets):
+    return VERDANT_STATIONS.get(tuple(sheets), {})
+
+
 @dataclass
 class Settings:
     source: str = "coops"
@@ -56,8 +69,8 @@ class Settings:
             raise ValueError("Choose coops, verdant, or standard_csv.")
         if not re.fullmatch(r"[A-Za-z0-9_-]+", self.site):
             raise ValueError("Site name must contain only letters, numbers, underscores or hyphens.")
-        if self.axis_method not in {"pca", "doubled_angle", "fixed"}:
-            raise ValueError("Axis method must be pca, doubled_angle, or fixed.")
+        if self.axis_method not in {"pca", "doubled_angle"}:
+            raise ValueError("Axis method must be pca or doubled_angle.")
         if self.profile_coordinate_mode not in {"physical", "legacy_normalized"}:
             raise ValueError("Profile coordinates must be physical or legacy_normalized.")
         if self.coops_depth_reference not in {"unknown", "below_surface", "above_bed"}:

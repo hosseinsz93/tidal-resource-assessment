@@ -32,10 +32,12 @@ specific to an inactive source are ignored. Slack is derived automatically from 
 
 ### Verdant stations
 
-Each Verdant workbook holds two stations. Choose one station for both deployment periods and
-set these fields together in `data_and_quality`:
+Each Verdant workbook holds two stations. Choose one station for both deployment periods by
+setting only `verdant_sheets`. The heading offsets, excluded bins and water depth below are then
+filled in automatically. A value written explicitly in `config.json` overrides the preset; leave
+those keys out unless you mean to override them. Sheet names without a preset require all three.
 
-| Field | Station B (current `config.json`) | Station A |
+| Field | Station B | Station A (current `config.json`) |
 |---|---|---|
 | verdant_sheets | `["Station B", "Station B-2"]` | `["Station A", "Station A-2"]` |
 | verdant_heading_offsets | `[-5.53, 3.2]` | `[-0.07, 0.04]` |
@@ -72,10 +74,8 @@ valid, so every timestamp passes. Do not lower `min_bin_coverage` instead: the d
 would then use a different set of bins at different times.
 
 Excluding a bin that is not in the selected station is an error. Station B's list cannot be
-used for Station A, and the reverse also fails. The notebook panel refills
-`45, 46, 47, 48, 49` whenever `verdant` is selected, so replace that with 39–43 before a
-Station A run. Change `excluded_bins` in the same edit as the sheets, heading offsets, and
-water depth.
+used for Station A, and the reverse also fails. The station presets avoid this; the notebook
+setup panel applies the same presets when the sheet names change.
 
 Heading offsets use the original orientation-correction method: the arithmetic mean of the
 first `Dir` column over both periods minus that period's mean. This method reproduces the B
@@ -108,8 +108,8 @@ omitted optional fields use backend defaults. Slack is derived from cut-in, not 
 
 | Key | Meaning |
 |---|---|
-| axis_method | `pca`, `doubled_angle`, or `fixed` |
-| flood_reference_deg | Floodward compass bearing, degrees true; selects axis orientation |
+| axis_method | How the principal flood–ebb axis is calculated from the data: `pca` (velocity-weighted spread) or `doubled_angle` (direction-only mean) |
+| flood_reference_deg | Label hint only, degrees true. The axis is always calculated; this picks which of its two ends is called flood (the end closer to this bearing). It does not move the axis |
 | smooth_samples | Positive integer window for phase-classification smoothing |
 | gap_factor | Gap threshold relative to nominal sampling interval; greater than 1 |
 | min_cycle_hours, max_cycle_hours | Accepted full-cycle duration range in hours |

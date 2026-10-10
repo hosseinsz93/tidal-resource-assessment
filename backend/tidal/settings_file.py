@@ -2,7 +2,7 @@
 from dataclasses import fields
 from pathlib import Path
 import json
-from .config import Settings
+from .config import Settings, verdant_station_preset
 
 # Grouping objects in config.json. They are not settings themselves.
 SECTIONS = {
@@ -87,6 +87,14 @@ def load_settings(root, path="config.json"):
             valid = isinstance(value, str)
         if not valid:
             raise ValueError(f"Invalid value/type for '{key}'. See CONFIGURATION.md; numbers must not be quoted.")
+    if data["source"] == "verdant":
+        sheets = data.get("verdant_sheets", defaults.verdant_sheets)
+        preset = verdant_station_preset(sheets)
+        if not preset and not {"verdant_heading_offsets", "excluded_bins", "water_depth_m"} <= set(data):
+            raise ValueError(f"No station preset for verdant_sheets {list(sheets)}; set verdant_heading_offsets, "
+                             "excluded_bins and water_depth_m explicitly.")
+        for key, value in preset.items():
+            data.setdefault(key, value)
     if "slack_mps" in data and data["slack_mps"] != data.get("cut_in_mps", defaults.cut_in_mps):
         raise ValueError("Slack equals cut-in: remove slack_mps or set it equal to cut_in_mps.")
     cfg = Settings(**data).validate()

@@ -40,22 +40,20 @@ def depth_average(data, settings):
 def estimate_axis(east, north, method="pca", reference=252.38):
     east, north = np.asarray(east), np.asarray(north)
     good = np.isfinite(east) & np.isfinite(north) & (np.hypot(east, north) > 0)
-    if method == "fixed":
-        return float(reference % 360)
     if good.sum() < 3:
         raise ValueError("At least three valid, nonzero vectors are required for an axis estimate.")
     if method == "pca":
         cov = np.cov(np.vstack([east[good], north[good]]))
         values, vectors = np.linalg.eigh(cov)
         if values[-1] <= 0 or np.isclose(values[0], values[-1], rtol=1e-3, atol=1e-12):
-            raise ValueError("There is no well-defined principal axis. Choose a known fixed flood bearing.")
+            raise ValueError("There is no well-defined principal axis; try axis_method 'doubled_angle'.")
         direction = vectors[:, -1]
         bearing = np.degrees(np.arctan2(direction[0], direction[1])) % 360
     elif method == "doubled_angle":
         theta = np.arctan2(east[good], north[good])
         s, c = np.sin(2 * theta).mean(), np.cos(2 * theta).mean()
         if np.hypot(s, c) < 1e-6:
-            raise ValueError("Doubled-angle direction is undefined; choose a fixed bearing.")
+            raise ValueError("Doubled-angle direction is undefined; try axis_method 'pca'.")
         bearing = np.degrees(0.5 * np.arctan2(s, c)) % 360
     else:
         raise ValueError(f"Unknown axis method: {method}")

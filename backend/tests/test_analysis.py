@@ -153,6 +153,12 @@ def test_notebook_presets_and_run_log_restore(tmp_path):
     panel.controls["source"].value = "verdant"
     cfg = panel.get_settings()
     assert cfg.excluded_bins == (45, 46, 47, 48, 49)
+    assert cfg.water_depth_m == 26.9
+    panel.controls["verdant_sheets"].value = "Station A, Station A-2"
+    cfg = panel.get_settings()
+    assert cfg.excluded_bins == (39, 40, 41, 42, 43)
+    assert cfg.verdant_heading_offsets == (-0.07, 0.04)
+    assert cfg.water_depth_m == 24.0
     assert cfg.time_zone == "UTC"
     assert cfg.ensemble_minutes == 10
     restored = Settings(**json.loads(json.dumps(cfg.to_dict())))

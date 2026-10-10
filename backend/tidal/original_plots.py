@@ -70,7 +70,7 @@ def save_original_figures(assessment, directory):
         for phase in ("EBB", "FLOOD", "SLACK"):
             sub = avg[avg.phase == phase]
             ax.scatter(sub.time, sub.along_mps, color=COLORS[phase], s=2, label=phase.title())
-        ax.set_ylabel("Signed along velocity (m/s)")
+        ax.set_ylabel("Signed streamwise velocity (m/s)")
         ax.legend(ncol=3, markerscale=3)
 
     def phase_hist(ax):
@@ -79,7 +79,7 @@ def save_original_figures(assessment, directory):
         for phase in ("EBB", "FLOOD", "SLACK"):
             ax.hist(avg.loc[avg.phase == phase, "along_mps"].dropna(), bins=edges, color=COLORS[phase], alpha=.65,
                     edgecolor="k", linewidth=.6, label=phase.title())
-        ax.set(xlabel="Signed along velocity (m/s)", ylabel="Sample count")
+        ax.set(xlabel="Signed streamwise velocity (m/s)", ylabel="Sample count")
         ax.legend()
 
     # Preserve the six original flowVisualized output identities.
@@ -88,7 +88,7 @@ def save_original_figures(assessment, directory):
     bar, compass = fig.add_subplot(121), fig.add_subplot(122, projection="polar")
     phases = ["EBB", "FLOOD"]
     bar.bar([p.title() for p in phases], [directions.loc[p, "mean_speed_mps"] for p in phases], color=[COLORS[p] for p in phases])
-    bar.set_ylabel("Mean horizontal speed (m/s)")
+    bar.set_ylabel("Mean horizontal velocity (m/s)")
     compass.set_theta_zero_location("N")
     compass.set_theta_direction(-1)
     compass.set_xticks(np.deg2rad(np.arange(0, 360, 45)), ["N", "NE", "E", "SE", "S", "SW", "W", "NW"])
@@ -114,7 +114,7 @@ def save_original_figures(assessment, directory):
     for patch, phase in zip(artists["boxes"], ("EBB", "FLOOD", "SLACK")):
         patch.set_facecolor((*plt.matplotlib.colors.to_rgb(COLORS[phase]), .6))
     axs[1].set_xticks([1, 2, 3], ["Ebb", "Flood", "Slack"])
-    axs[1].set_ylabel("Absolute along velocity (m/s)")
+    axs[1].set_ylabel("Absolute streamwise velocity (m/s)")
     for ax in axs:
         ax.spines[["top", "right"]].set_visible(True)
     save("_Statistics", fig)
@@ -136,9 +136,9 @@ def save_original_figures(assessment, directory):
     pdf, cdf = t["signed_velocity_distribution"], t["signed_velocity_cdf"]
     axs[1].bar((pdf.velocity_lo_mps+pdf.velocity_hi_mps)/2, pdf.pdf, width=pdf.velocity_hi_mps-pdf.velocity_lo_mps, color="tab:green",
                 edgecolor="k", linewidth=.6, linestyle="-")
-    axs[1].set(xlabel="Signed along velocity (m/s)", ylabel="Probability density")
+    axs[1].set(xlabel="Signed streamwise velocity (m/s)", ylabel="Probability density")
     axs[2].plot(cdf.signed_velocity_mps, cdf.sample_cdf, color="tab:purple")
-    axs[2].set(xlabel="Signed along velocity (m/s)", ylabel="Sample CDF", ylim=(0, 1))
+    axs[2].set(xlabel="Signed streamwise velocity (m/s)", ylabel="Sample CDF", ylim=(0, 1))
     for ax in axs[1:]:
         for sign in (-1, 1):
             ax.axvline(sign*cfg.slack_mps, color="0.4", ls="--")
@@ -201,10 +201,10 @@ def save_original_figures(assessment, directory):
         direction = row["direction_degT"]
         summary.append(f"{label} direction: {direction:.1f}° ({_cardinal_direction(direction)})"
                        if np.isfinite(direction) else f"{label} direction: unavailable")
-        summary.append(f"Mean {label.lower()} speed: {row['mean_speed_mps']:.2f} m/s"
-                       if np.isfinite(row["mean_speed_mps"]) else f"Mean {label.lower()} speed: unavailable")
+        summary.append(f"Mean {label.lower()} velocity: {row['mean_speed_mps']:.2f} m/s"
+                       if np.isfinite(row["mean_speed_mps"]) else f"Mean {label.lower()} velocity: unavailable")
     fig.text(.75, .12, "\n".join(summary), ha="left", va="bottom", fontsize=10, linespacing=1.35)
-    note = "Radius: horizontal speed; angles: degrees true"
+    note = "Radius: horizontal velocity; angles: degrees true"
     if displayed < len(polar):
         note += f"; evenly displayed {displayed:,} of {len(polar):,} valid bin records"
     save("tidal_velocity_polar", fig, note=note, title=_polar_title(cfg), polar_layout=True)
@@ -265,7 +265,7 @@ def save_original_figures(assessment, directory):
         axs[0].set_ylabel("Reported bin coordinate (m)")
         if assessment.dataset.data.depth_reference.eq("below_surface").all():
             axs[0].invert_yaxis()
-        save("TI_original_profiles", fig, "Ensemble-resolved variability; rolling horizontal-speed denominator")
+        save("TI_original_profiles", fig, "Ensemble-resolved variability; rolling horizontal-velocity denominator")
 
     fig, axs = plt.subplots(1, 2, figsize=(10, 5), subplot_kw={"projection": "polar"})
     for ax, phase in zip(axs, ("EBB", "FLOOD")):
@@ -304,7 +304,7 @@ def save_original_figures(assessment, directory):
                 ax.scatter(sub.time[mask], sub.signed_speed_mps[mask], s=3, color=COLORS[phase], label=f"{phase.title()} peak")
             ax.axhline(0, color="k", lw=.5)
             ax.legend(loc="upper right", fontsize=8, markerscale=3)
-            ax.set(title=f"NOAA CO-OPS · {row.site} · {row.time_reference}", ylabel="Predicted event speed (m/s)")
+            ax.set(title=f"NOAA CO-OPS · {row.site} · {row.time_reference}", ylabel="Predicted event velocity (m/s)")
         fig.autofmt_xdate()
         save("annual_comparison", fig, "Nonuniform prediction events, shown separately from measured ADCP results", prefix="NOAA CO-OPS")
     return paths

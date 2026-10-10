@@ -53,6 +53,23 @@ def test_sectioned_config_flattens(tmp_path):
         load_settings(tmp_path, path)
 
 
+@pytest.mark.parametrize('sheets,offsets,bins,depth', [
+    (["Station A", "Station A-2"], (-0.07, 0.04), (39, 40, 41, 42, 43), 24.0),
+    (["Station B", "Station B-2"], (-5.53, 3.2), (45, 46, 47, 48, 49), 26.9)])
+def test_verdant_station_preset_follows_sheets(tmp_path, sheets, offsets, bins, depth):
+    cfg = load_settings(tmp_path, write_config(tmp_path, source="verdant", verdant_sheets=sheets))
+    assert cfg.verdant_heading_offsets == offsets
+    assert cfg.excluded_bins == bins
+    assert cfg.water_depth_m == depth
+    cfg = load_settings(tmp_path, write_config(tmp_path, source="verdant", verdant_sheets=sheets, water_depth_m=20.0))
+    assert cfg.water_depth_m == 20.0
+
+
+def test_unknown_verdant_sheets_need_explicit_values(tmp_path):
+    with pytest.raises(ValueError, match="No station preset"):
+        load_settings(tmp_path, write_config(tmp_path, source="verdant", verdant_sheets=["Station C"]))
+
+
 def test_duplicate_keys_rejected(tmp_path):
     path = write_config(tmp_path)
     (tmp_path/path).write_text('{"source":"coops","source":"verdant"}')

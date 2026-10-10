@@ -2,7 +2,7 @@
 from dataclasses import fields
 from pathlib import Path
 import json
-from .config import Settings
+from .config import Settings, verdant_station_preset
 
 
 class SetupPanel:
@@ -40,8 +40,8 @@ class SetupPanel:
                 add("verdant_heading_offsets", w.Text, "Heading offsets (degrees)"),
                 add("excluded_bins", w.Text, "Exclude bins (comma list)"),
                 add("water_depth_m", w.Text, "Total water depth (m)")]
-        flow = [add("axis_method", w.Dropdown, "Channel axis method", options=[("Principal components (PCA)", "pca"), ("Doubled-angle directions", "doubled_angle"), ("Known flood bearing", "fixed")]),
-                add("flood_reference_deg", w.FloatText, "Floodward bearing (° true)"),
+        flow = [add("axis_method", w.Dropdown, "Channel axis method", options=[("Principal components (PCA)", "pca"), ("Doubled-angle directions", "doubled_angle")]),
+                add("flood_reference_deg", w.FloatText, "Flood-end hint (° true)"),
                 add("slack_mps", w.FloatText, "Slack threshold (m/s)"),
                 add("smooth_samples", w.IntText, "Smoothing samples"),
                 add("max_speed_mps", w.FloatText, "Maximum valid speed (m/s)"),
@@ -85,6 +85,7 @@ class SetupPanel:
         self.widget = w.VBox([tabs, check, self.feedback,
                               w.HTML("<p><b>After changing a setting:</b> rerun Preprocess, Process, then Postprocess. Each exported run keeps its own settings and results.</p>")])
         source.observe(self._source_changed, names="value")
+        self.controls["verdant_sheets"].observe(self._apply_station_preset, names="value")
         self.controls["slack_mps"].disabled = True
         self.controls["slack_mps"].value = self.controls["cut_in_mps"].value
         self.controls["cut_in_mps"].observe(lambda change: setattr(self.controls["slack_mps"], "value", change["new"]), names="value")
@@ -114,7 +115,7 @@ class SetupPanel:
                     ax.scatter(curve.speed_mps, curve.power_kw, s=8, label="Input points")
                     for speed, label in ((cfg.cut_in_mps, "Cut-in / slack"), (cfg.rated_speed_mps, "Rated"), (cfg.cut_out_mps, "Cut-off")):
                         ax.axvline(speed, ls=":", label=label)
-                    ax.set(xlabel="Speed (m/s)", ylabel="Power (kW)")
+                    ax.set(xlabel="Velocity (m/s)", ylabel="Power (kW)")
                     ax.legend(fontsize=8)
                     display(fig)
                     plt.close(fig)
@@ -134,10 +135,23 @@ class SetupPanel:
         for key, value in presets[change["new"]].items():
             self.controls[key].value = value
         # Source-specific geometry and excluded bins must not silently carry over.
-        self.controls["water_depth_m"].value = {"coops": "37.8", "verdant": "26.9"}.get(change["new"], "")
-        self.controls["excluded_bins"].value = "45, 46, 47, 48, 49" if change["new"] == "verdant" else ""
+        self.controls["water_depth_m"].value = "37.8" if change["new"] == "coops" else ""
+        self.controls["excluded_bins"].value = ""
+        if change["new"] == "verdant":
+            self._apply_station_preset()
         if change["new"] in {"coops", "verdant"}:
             self.controls["ensemble_minutes"].value = 60 if change["new"] == "coops" else 10
+
+    def _apply_station_preset(self, change=None):
+        if self.controls["source"].value != "verdant":
+            return
+        sheets = [s.strip() for s in self.controls["verdant_sheets"].value.split(",") if s.strip()]
+        preset = verdant_station_preset(sheets)
+        if not preset:
+            return
+        self.controls["verdant_heading_offsets"].value = ", ".join(f"{x:g}" for x in preset["verdant_heading_offsets"])
+        self.controls["excluded_bins"].value = ", ".join(str(b) for b in preset["excluded_bins"])
+        self.controls["water_depth_m"].value = f"{preset['water_depth_m']:g}"
 
     def get_settings(self):
         if self.widget is None:
@@ -190,7 +204,7 @@ def show_results(assessment):
     from IPython.display import display, Markdown
     if not assessment.processed:
         raise ValueError("Run Process first.")
-    print(f"Floodward axis: {assessment.bearing:.2f}° true. Positive along-channel flow = flood.")
+    print(f"Floodward axis: {assessment.bearing:.2f}° true. Positive streamwise flow = flood.")
     for title, key in (("Phase summary", "phase_summary"), ("Tidal-cycle fit", "cycle_fit"),
                        ("Vertical-profile fits", "profile_fits"), ("Depth-averaged residual variability", "variability_depth_averaged"),
                        ("Energy estimate", "energy_summary"),
@@ -251,7 +265,7 @@ def explore(assessment):
             fig, ax = plt.subplots(figsize=(10, 3.5))
             for label, group in sub.groupby("phase"):
                 ax.scatter(group.time, group.along_mps, s=5, color=COLORS[label], label=label.title())
-            ax.set(xlabel=f"Time ({assessment.dataset.metadata['time_zone']})", ylabel="Along-channel velocity (m/s)", title=selector.label)
+            ax.set(xlabel=f"Time ({assessment.dataset.metadata['time_zone']})", ylabel="Streamwise velocity (m/s)", title=selector.label)
             if len(sub):
                 ax.legend()
             fig.autofmt_xdate()
