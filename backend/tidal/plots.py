@@ -94,15 +94,26 @@ def save_figures(assessment, directory):
         axs[1].set(xlabel="Hub along-speed bin (m/s)", ylabel="Annual contribution (kWh)")
         save("energy_contributions", fig)
         curve = tables["power_curve"].sort_values("speed_mps")
-        fig, ax = plt.subplots(figsize=(7, 4))
-        ax.plot(curve.speed_mps, curve.power_kw, color="0.4", ls="--", label="Supplied curve")
-        effective = curve.power_kw.where((curve.speed_mps >= cfg.cut_in_mps) & (curve.speed_mps < cfg.cut_out_mps), 0)
-        ax.plot(curve.speed_mps, effective, color="tab:green", label="With selected operating limits")
-        ax.axvline(cfg.cut_in_mps, ls=":", color="0.4")
-        ax.axvline(cfg.rated_speed_mps, ls="--", color="tab:orange", label="Rated speed")
-        ax.axvline(cfg.cut_out_mps, ls=":", color="0.4")
-        ax.set(xlabel="Speed (m/s)", ylabel="Power (kW)")
-        ax.legend()
+        cin, rated_u, cout, rated_p = cfg.cut_in_mps, cfg.rated_speed_mps, cfg.cut_out_mps, cfg.rated_kw
+        x_max = cout*1.2
+        inside = np.linspace(cin, cout, 400)
+        speeds = np.r_[0, cin, inside, cout, cout, x_max]
+        power = np.r_[0, 0, np.interp(inside, curve.speed_mps, curve.power_kw), np.interp(cout, curve.speed_mps, curve.power_kw), 0, 0]
+        fig, ax = plt.subplots(figsize=(7, 4.5))
+        ax.plot(speeds, power, color="tab:red", lw=1.8)
+        ax.vlines(rated_u, 0, rated_p, color="k", lw=0.8)
+        arrow = dict(arrowstyle="->", color="k", lw=0.8)
+        ax.annotate("Cut-in speed", xy=(cin, 0), xytext=(cin, rated_p*0.3), ha="center", arrowprops=arrow)
+        ax.annotate("Rated output speed", xy=(rated_u, rated_p), xytext=(rated_u, rated_p*1.15), ha="center", arrowprops=arrow)
+        ax.annotate("Rated output power", xy=(rated_u*0.97, rated_p), xytext=(cin*0.6, rated_p*1.0),
+                    ha="left", va="center", arrowprops=arrow)
+        ax.annotate("Cut-out speed", xy=(cout, rated_p), xytext=(cout*0.82, rated_p*1.15), ha="center", arrowprops=arrow)
+        ax.set_xticks([cin, rated_u, cout])
+        ax.set_xticklabels([f"{cin:g}", f"{rated_u:.2g}", f"{cout:g}"])
+        ax.set_yticks([])
+        ax.set(xlim=(0, x_max), ylim=(0, rated_p*1.3), xlabel="Steady flow speed (m/s)", ylabel="Power (kW)")
+        for side in ("top", "right"):
+            ax.spines[side].set_visible(False)
         save("turbine_power_curve", fig)
     if "postprocessing_catalog" in tables:
         from .original_plots import save_original_figures
