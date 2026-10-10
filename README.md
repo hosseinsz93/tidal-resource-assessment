@@ -68,14 +68,14 @@ Velocity profiles show negative ebb on the left and positive flood on the right.
 - Gap-aware cycle segmentation, normalized ensemble cycles and harmonic fits.
 - Phase-mean vertical profiles and separate event-peak profiles; power/log fits when physical height metadata support them.
 - Rolling-residual intensity by depth/phase, with optional supplied instrument-noise variance subtraction.
-- Time-weighted hub-bin speed distributions, power-curve integration and gross turbine/farm AEP.
+- Time-weighted hub-bin speed distributions, power-curve integration and single-turbine AEP (IEC TS 62600-200, 8,766 h/yr).
 - Consistent red flood / blue ebb / grey slack figures, with bin/phase/time exploration. The
   tidal-velocity polar figure follows the principal-flow diagnostics and shows valid bin vectors,
   the bidirectional principal axis, phase-mean bearings and phase-mean speeds for every source.
 
 The example flood reference and turbine are specific to Long Island Sound. Check these for a new site. The backend uses named columns rather than legacy positional layouts. Depth averages are arithmetic vector means over measured bins. Sample weights assume ensemble-start timestamps, cap support across large gaps at nominal cadence, and assign one nominal interval to the last record.
 
-**Scientific scope:** six/ten-minute averaged velocities provide resolved variability, not full burst-scale turbulence. The workflow does not infer a noise floor spectrally from these coarse records. Unknown depth datum is never guessed from velocity gradients; unsupported physical fits are skipped. Log fitting requires total water depth and three near-bed points. AEP assumes a representative annual distribution, and farm scaling omits wake/electrical losses. This implementation is not an IEC certification.
+**Scientific scope:** six/ten-minute averaged velocities provide resolved variability, not full burst-scale turbulence. The workflow does not infer a noise floor spectrally from these coarse records. Unknown depth datum is never guessed from velocity gradients; unsupported physical fits are skipped. Log fitting requires total water depth and three near-bed points. AEP assumes a representative annual distribution. This implementation is not an IEC certification.
 
 All original postprocessing is accessible through the notebook's result-table selector and figure gallery. The exported checklist and [postprocessing mapping](backend/POSTPROCESSING_PARITY.md) identify the corresponding outputs. Original normalized profile fits and original TI definitions are retained separately from physical-coordinate fits and newer residual-intensity measures; legacy inferred coordinates are not physical bed geometry.
 

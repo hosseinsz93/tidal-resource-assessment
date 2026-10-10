@@ -98,7 +98,7 @@ def test_energy_time_weights_and_cutoffs():
     assert bins.probability.sum() == pytest.approx(1)
     assert bins.filter(like="prob_").sum().sum() == pytest.approx(1)
     assert summary.mean_power_kw.iloc[0] == pytest.approx(60)
-    assert summary.annual_kwh_per_turbine.iloc[0] == pytest.approx(8760*60)
+    assert summary.aep_kwh.iloc[0] == pytest.approx(8766*60)
     assert bins.loc[bins.speed_center_mps >= 3.2, "power_kw"].eq(0).all()
 
 

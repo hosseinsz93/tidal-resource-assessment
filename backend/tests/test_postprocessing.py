@@ -80,5 +80,5 @@ def test_restored_profiles_resource_metrics_and_distributions(tmp_path):
     hist = t["signed_velocity_distribution"]
     assert np.sum(hist.pdf*(hist.velocity_hi_mps-hist.velocity_lo_mps)) == pytest.approx(1)
     assert t["signed_velocity_cdf"].time_weighted_cdf.iloc[-1] == pytest.approx(1)
-    assert len(t["postprocessing_catalog"]) == 21
+    assert len(t["postprocessing_catalog"]) == 22
     assert t["cycle_original_fit"].iloc[0].r_squared > .999

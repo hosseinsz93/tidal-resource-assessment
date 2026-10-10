@@ -272,10 +272,10 @@ def energy_direction_tables(resolved, tables, cfg):
         result[f"f_{label}"] = seconds/hub.weight_s.sum()
     result["f_total"] = result[["f_flood", "f_ebb", "f_zero"]].sum(axis=1)
     row = tables["energy_summary"].iloc[0]
-    farm = pd.DataFrame([{"turbines": cfg.turbine_count, "annual_kwh": row.annual_kwh_per_turbine*cfg.turbine_count,
-        "observed_period_kwh": row.observed_period_kwh*cfg.turbine_count, "capacity_factor": row.capacity_factor,
-        "period_scaled_annual_kwh": row.observed_period_kwh/row.valid_observed_hours*8760*cfg.turbine_count}])
-    return {"site_probabilities_ebb_flood": result, "farm_energy_summary": farm}
+    aep = pd.DataFrame([{"aep_kwh": row.aep_kwh, "observed_period_kwh": row.observed_period_kwh,
+        "capacity_factor": row.capacity_factor,
+        "period_scaled_annual_kwh": row.observed_period_kwh/row.valid_observed_hours*row.hours_per_year}])
+    return {"site_probabilities_ebb_flood": result, "turbine_aep_summary": aep}
 
 
 def orientation_diagnostics(resolved, metadata):
@@ -380,7 +380,7 @@ def annual_comparisons(root, cfg):
 CATALOG = [
     ("MATLAB / inputs02 cosine prototypes", "Full-record fixed 12 h 25 min cosine and residuals", "fixed_period_cosine_fit", "(table only)"),
     ("flowVisualized.py", "Mean speeds and dominant-direction compass", "dominant_directions", "_FlowSummary"),
-    ("flowVisualized.py", "Signed time series and velocity components", "depth_averaged", "_TimeSeries"),
+    ("flowVisualized.py", "Signed time series and velocity components", "depth_averaged", "_Time Series"),
     ("flowVisualized.py", "Phase histograms and magnitude box plots", "phase_statistics", "_Statistics"),
     ("flowVisualized.py", "Current rose", "depth_averaged", "current_rose"),
     ("principal_flood_ebb_calculation.ipynb", "Ellipse, signed PDF and CDF", "signed_velocity_distribution", "principal_flow_diagnostics"),
@@ -393,9 +393,10 @@ CATALOG = [
     ("tidal-cycles.ipynb", "Event profiles and phase-mean normalized log fits", "original_profile_curves", "(table only)"),
     ("TI-calculator.ipynb", "Original raw and corrected TI by bin", "ti_original_by_bin", "TI_original_profiles"),
     ("TI-calculator.ipynb", "Pooled-depth and depth-averaged phase TI", "ti_original_depth_pooled", "(table only)"),
-    ("adcp_aep_pcu_iec.ipynb", "Power curve, hub probabilities and AEP bins", "energy_bins", "energy_contributions"),
+    ("adcp_aep_pcu_iec.ipynb", "Time-weighted hub velocity probability", "energy_bins", "hub_velocity_probability"),
+    ("adcp_aep_pcu_iec.ipynb", "Power curve and IEC AEP contribution by speed bin", "energy_bins", "energy_contributions"),
     ("adcp_aep_pcu_iec.ipynb", "Unconditional signed ebb/flood probabilities", "site_probabilities_ebb_flood", "ebb_flood_probabilities"),
-    ("adcp_aep_pcu_iec.ipynb", "Farm annual and observed-period energy", "farm_energy_summary", "farm_energy"),
+    ("adcp_aep_pcu_iec.ipynb", "Single-turbine IEC AEP and observed-period energy", "turbine_aep_summary", "turbine_aep"),
     ("orientation-correction.ipynb", "Before/after deployment heading comparison", "orientation_diagnostics", "(table only)"),
     ("orientation-correction.ipynb", "Separate ebb/flood direction plots", "dominant_directions", "current_rose_ebb_flood"),
     ("coops-data.ipynb", "Annual-event station comparison", "annual_summary", "annual_comparison"),

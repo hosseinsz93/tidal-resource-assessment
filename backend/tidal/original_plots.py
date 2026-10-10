@@ -157,7 +157,7 @@ def save_original_figures(assessment, directory):
         full = polar.loc[polar.phase.eq(phase)]
         shown = _display_sample(full)
         displayed += len(shown)
-        ax.scatter(np.deg2rad(shown.direction_degT), shown.speed_mps, s=7, alpha=.28,
+        ax.scatter(np.deg2rad(shown.direction_degT), shown.speed_mps, s=7, alpha=.08,
                    color=COLORS[phase], edgecolors="none", rasterized=True,
                    label=f"{phase.title()} (ADCP bin data)", zorder=3)
     maximum = float(polar.speed_mps.max()) if len(polar) else 0
@@ -190,8 +190,10 @@ def save_original_figures(assessment, directory):
     ax.set_yticklabels([f"{value:.1f} m/s" for value in radial_ticks])
     ax.set_rlabel_position(78)
     ax.grid(True, color="0.45", ls="--", lw=.7, alpha=.75)
-    ax.legend(loc="upper left", bbox_to_anchor=(1.03, 1.08), fontsize=9,
-              frameon=True, fancybox=False)
+    legend = ax.legend(loc="upper left", bbox_to_anchor=(1.03, 1.08), fontsize=9,
+                       frameon=True, fancybox=False)
+    for handle in legend.legend_handles:
+        handle.set_alpha(1)
     flood, ebb = phase_stats["FLOOD"], phase_stats["EBB"]
     summary = [f"Principal axis: {axis_deg:.1f}° "
                f"({_cardinal_direction(axis_deg)}–{_cardinal_direction(axis_deg+180)})"]
@@ -282,11 +284,13 @@ def save_original_figures(assessment, directory):
         ax.set(xlabel="Absolute signed hub velocity (m/s)", ylabel="Unconditional probability")
         ax.legend()
         save("ebb_flood_probabilities", fig, "Direction from hub-velocity sign; includes near-slack flow, unlike threshold phase labels")
-        farm = t["farm_energy_summary"].iloc[0]
+        aep = t["turbine_aep_summary"].iloc[0]
         fig, ax = plt.subplots(figsize=(7, 4))
-        ax.bar(["Observed period", "Annual extrapolation"], [farm.observed_period_kwh/1000, farm.annual_kwh/1000], color=["tab:purple", "tab:green"])
-        ax.set_ylabel(f"Gross farm energy (MWh; {int(farm.turbines)} turbines)")
-        save("farm_energy", fig)
+        bars = ax.bar(["Observed period", "Annual energy production"], [aep.observed_period_kwh/1000, aep.aep_kwh/1000],
+                      color=["tab:purple", "tab:green"])
+        ax.bar_label(bars, fmt="%.1f MWh")
+        ax.set_ylabel("Single-turbine energy (MWh)")
+        save("turbine_aep", fig, f"IEC TS 62600-200: AEP = 8766 h × Σ p(Uᵢ)·P(Uᵢ); capacity factor {aep.capacity_factor:.1%}")
 
     annual = t.get("annual_summary")
     if annual is not None and len(annual):

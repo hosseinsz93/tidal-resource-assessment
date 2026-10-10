@@ -71,7 +71,7 @@ class SetupPanel:
             "Select a source first; this updates the example paths. Blank water depth means unknown. Confirm depth datum from station metadata. Verdant uses UTC and workbook bed heights.",
             "For PCA/doubled-angle methods, the flood bearing chooses the correct end of the bidirectional axis. For fixed mode, it is the exact projection bearing. The example bearing is specific to Long Island Sound.",
             "Residual intensity describes fluctuations resolved by the supplied time averages. Leave noise at zero unless a defensible instrument/ensemble-specific estimate is available. Physical log-law fits need water depth and at least three near-bed points.",
-            "The supplied power curve and turbine settings are examples. Hub bin is a measurement bin, not a physical hub height. AEP assumes the sampled distribution represents a year; farm scaling does not include wakes.",
+            "The supplied power curve and turbine settings are examples. Hub bin is a measurement bin, not a physical hub height. Single-turbine AEP (IEC TS 62600-200) assumes the sampled distribution represents a year.",
         ]
         sections = []
         for controls, note in zip((data, flow, variability, energy), notes):

@@ -2,6 +2,8 @@
 import numpy as np
 import pandas as pd
 
+HOURS_PER_YEAR = 8766
+
 
 def time_support(times, gap_factor=1.5):
     """Forward sample support, capped at nominal cadence across gaps and at end.
@@ -298,13 +300,14 @@ def energy(resolved, curve, settings):
         mask = hub.phase.eq(phase).to_numpy()
         sec, _ = np.histogram(speed[mask], edges, weights=weights[mask])
         table[f"prob_{phase.lower()}"] = sec/weights.sum()
-    table["annual_kwh"] = 8760 * settings.availability * table.probability * power
+    # IEC TS 62600-200: AEP = N_h * sum_i p(U_i) * P(U_i), with N_h = 8766 h per year.
+    table["annual_kwh"] = HOURS_PER_YEAR * settings.availability * table.probability * power
     annual = table.annual_kwh.sum()
     mean_power = np.dot(table.probability, power)
     summary = pd.DataFrame([{"hub_bin": settings.hub_bin, "valid_observed_hours": weights.sum()/3600,
-                             "mean_power_kw": mean_power, "annual_kwh_per_turbine": annual,
+                             "hours_per_year": HOURS_PER_YEAR, "mean_power_kw": mean_power,
+                             "aep_kwh": annual,
                              "observed_period_kwh": mean_power*weights.sum()/3600*settings.availability,
-                             "capacity_factor": annual/(8760*settings.rated_kw),
-                             "turbines": settings.turbine_count, "availability": settings.availability,
-                             "gross_farm_annual_kwh": annual*settings.turbine_count}])
+                             "capacity_factor": annual/(HOURS_PER_YEAR*settings.rated_kw),
+                             "availability": settings.availability}])
     return table, summary

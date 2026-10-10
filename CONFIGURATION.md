@@ -10,7 +10,7 @@ Data and turbine CSV paths remain relative to the repository and inside `inputs/
 |---|---|
 | `data_and_quality` | Source, site, input path, time, depth datum, Verdant sheets, exclusions, speed and coverage limits, water depth |
 | `flow_cycles_profiles` | Channel axis, cycles, residual window, profiles |
-| `turbine_and_power` | Hub bin, cut-in, rated speed, cut-off, power curve and farm scaling |
+| `turbine_and_power` | Hub bin, cut-in, rated speed, cut-off, power curve and single-turbine AEP |
 | `comparisons` | Annual prediction-event comparison |
 
 To switch sources, edit these fields in the same file (also review the site-specific flood
@@ -122,7 +122,7 @@ omitted optional fields use backend defaults. Slack is derived from cut-in, not 
 
 | Key | Meaning |
 |---|---|
-| energy_enabled | Compute turbine/farm energy, `true` or `false` |
+| energy_enabled | Compute single-turbine IEC AEP, `true` or `false` |
 | hub_bin | Measurement bin used for energy; must exist in selected data |
 | cut_in_mps | Cut-in speed, m/s; also sets slack to absolute smoothed along velocity ≤ this value |
 | rated_speed_mps | Rated speed, m/s; must lie strictly between cut-in and cut-off |
@@ -136,7 +136,7 @@ omitted optional fields use backend defaults. Slack is derived from cut-in, not 
 | power_curve | CSV path used only in `csv` mode; columns `speed_mps,power_kw` |
 | power_curve_points | Array of `[speed_mps, power_kw]` pairs, used only in `edited` mode |
 | speed_bin_width | Positive speed-bin width for energy integration, m/s |
-| turbine_count | Positive integer turbine count for gross farm scaling |
+| turbine_count | Retained for compatibility; energy results are for a single turbine and do not use it |
 | availability | Energy availability multiplier, (0,1] |
 
 For example, set `power_curve_mode` to `edited` and revise:

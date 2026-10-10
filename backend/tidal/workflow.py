@@ -83,7 +83,7 @@ def process(assessment):
         from .turbine import power_curve
         tables["power_curve"] = power_curve(assessment.root, cfg)
         tables["energy_bins"], tables["energy_summary"] = analysis.energy(resolved, tables["power_curve"], cfg)
-        messages.append("AEP extrapolates this record's speed distribution to 8,760 hours. Gross farm scaling omits wakes, electrical losses and seasonal corrections.")
+        messages.append("Single-turbine AEP follows IEC TS 62600-200, extrapolating this record's hub speed probabilities to 8,766 hours; it omits seasonal corrections.")
     from . import postprocessing as original
     tables.update(original.compute(assessment, tables, avg, resolved, bearing))
     tables.update(original.distributions(avg))

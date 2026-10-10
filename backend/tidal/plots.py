@@ -5,8 +5,8 @@ import matplotlib.pyplot as plt
 COLORS = {"FLOOD": "#D62728", "EBB": "#1F77B4", "SLACK": "#808080", "MISSING": "#222222"}
 FIGURE_ORDER = ("_TimeSeries", "velocity_components", "_Statistics", "current_rose", "current_rose_ebb_flood",
                 "tidal_cycles", "cycle_cosine_view", "_FlowSummary", "principal_flow_diagnostics", "tidal_velocity_polar", "Velocity_profiles",
-                "TI_original_profiles", "ebb_flood_probabilities", "turbine_power_curve", "energy_contributions",
-                "farm_energy", "annual_comparison")
+                "TI_original_profiles", "ebb_flood_probabilities", "turbine_power_curve", "hub_velocity_probability",
+                "energy_contributions", "turbine_aep", "annual_comparison")
 SOURCE_LABELS = {"coops": "NOAA CO-OPS", "verdant": "Verdant Power", "standard_csv": "Standard CSV"}
 
 
@@ -87,11 +87,20 @@ def save_figures(assessment, directory):
 
     if "energy_bins" in tables:
         bins = tables["energy_bins"]
-        fig, axs = plt.subplots(1, 2, figsize=(10, 4))
-        axs[0].plot(bins.speed_center_mps, bins.probability, color="tab:purple")
-        axs[0].set(xlabel="Hub along-speed bin (m/s)", ylabel="Time-weighted probability")
-        axs[1].bar(bins.speed_center_mps, bins.annual_kwh, width=cfg.speed_bin_width*0.9, color="tab:green")
-        axs[1].set(xlabel="Hub along-speed bin (m/s)", ylabel="Annual contribution (kWh)")
+        width = cfg.speed_bin_width*0.9
+        fig, ax = plt.subplots(figsize=(8, 4.5))
+        ax.bar(bins.speed_center_mps, 100*bins.probability, width=width, color="tab:purple", alpha=0.8)
+        for speed, label in ((cfg.cut_in_mps, "Cut-in"), (cfg.rated_speed_mps, "Rated"), (cfg.cut_out_mps, "Cut-out")):
+            ax.axvline(speed, color="0.3", ls="--", lw=0.9)
+            ax.text(speed, ax.get_ylim()[1]*0.97, f" {label}", ha="left", va="top", fontsize=9)
+        ax.set(xlabel=f"Hub along-channel speed, bin {cfg.hub_bin} (m/s)",
+               ylabel=f"Time-weighted probability p(Uᵢ) (%), ΔU = {cfg.speed_bin_width:g} m/s")
+        save("hub_velocity_probability", fig)
+        fig, ax = plt.subplots(figsize=(8, 4.5))
+        ax.bar(bins.speed_center_mps, bins.annual_kwh/1000, width=width, color="tab:green")
+        ax.set(xlabel=f"Hub along-channel speed, bin {cfg.hub_bin} (m/s)",
+               ylabel="AEP contribution (MWh/yr)",
+               title=f"Single turbine AEP = 8766 h × Σ p(Uᵢ)·P(Uᵢ) = {bins.annual_kwh.sum()/1000:,.1f} MWh/yr")
         save("energy_contributions", fig)
         curve = tables["power_curve"].sort_values("speed_mps")
         cin, rated_u, cout, rated_p = cfg.cut_in_mps, cfg.rated_speed_mps, cfg.cut_out_mps, cfg.rated_kw
