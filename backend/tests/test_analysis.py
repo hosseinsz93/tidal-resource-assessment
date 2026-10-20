@@ -69,6 +69,26 @@ def test_coops_any_number_of_segments_and_units(tmp_path):
     np.testing.assert_allclose(dataset.data.north_mps, 0, atol=1e-12)
 
 
+def test_lis1016_metadata_sets_noaa_bins_and_height_above_bed(tmp_path):
+    times = pd.date_range("2010-06-09", periods=3, freq="6min")
+    for depth, label in ((37.77, "37m77cm"), (35.78, "35m78cm"), (21.76, "21m76cm"), (5.76, "05m76cm")):
+        pd.DataFrame({"Date/Time": times, " Speed (cm/sec)": [100]*3,
+                      " Dir (true)": [250]*3}).to_csv(tmp_path/f"LIS1016_{label}-2010-06-09.csv", index=False)
+    cfg = Settings(site="LIS1016", energy_enabled=False)
+    dataset = validate_dataset(load_coops(tmp_path, cfg), cfg)
+    grid = dataset.data[["bin", "depth_m", "height_above_bed_m"]].drop_duplicates().sort_values("bin")
+    assert cfg.coops_adcp_orientation == "upward"
+    assert cfg.coops_depth_reference == "below_surface"
+    assert cfg.water_depth_m == pytest.approx(47.18)
+    assert cfg.flood_reference_deg == pytest.approx(250)
+    assert cfg.near_bed_fraction == pytest.approx(0.30)
+    assert grid.iloc[0].bin == 1
+    assert grid.iloc[0].depth_m == pytest.approx(37.77)
+    assert grid.iloc[0].height_above_bed_m == pytest.approx(9.41)
+    assert grid.loc[grid.depth_m == 21.76, "bin"].iloc[0] == 9
+    assert dataset.metadata["height_geometry_max_difference_m"] <= 0.05
+
+
 def test_conflicting_overlap_rejected(tmp_path):
     frame, cfg = synthetic(tmp_path)
     bad = frame.iloc[[0]].copy()
@@ -152,10 +172,12 @@ def test_notebook_presets_and_run_log_restore(tmp_path):
     panel = SetupPanel(tmp_path)
     panel.controls["source"].value = "verdant"
     cfg = panel.get_settings()
+    assert cfg.site == "Verdant_B"
     assert cfg.excluded_bins == (45, 46, 47, 48, 49)
     assert cfg.water_depth_m == 26.9
     panel.controls["verdant_sheets"].value = "Station A, Station A-2"
     cfg = panel.get_settings()
+    assert cfg.site == "Verdant_A"
     assert cfg.excluded_bins == (39, 40, 41, 42, 43)
     assert cfg.verdant_heading_offsets == (-0.07, 0.04)
     assert cfg.water_depth_m == 24.0
@@ -167,6 +189,11 @@ def test_notebook_presets_and_run_log_restore(tmp_path):
     panel.controls["source"].value = "coops"
     assert panel.get_settings().excluded_bins == ()
     assert panel.get_settings().ensemble_minutes == 60
+    assert panel.get_settings().coops_depth_reference == "below_surface"
+    assert panel.get_settings().coops_adcp_orientation == "upward"
+    assert panel.get_settings().water_depth_m == 47.18
+    assert panel.get_settings().flood_reference_deg == 250.0
+    assert panel.get_settings().near_bed_fraction == 0.30
 
 
 def test_settings_snapshot_and_low_coverage_guard(tmp_path):

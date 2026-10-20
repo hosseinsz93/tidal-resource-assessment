@@ -11,11 +11,13 @@ SOURCE_LABELS = {"coops": "NOAA CO-OPS", "verdant": "Verdant Power", "standard_c
 
 
 def figure_prefix(cfg, source=None):
-    """Name the series being drawn. Verdant titles follow the source, not a CO-OPS station id left in site."""
+    """Name the series being drawn. Verdant titles include Station A/B from the selected sheets."""
+    from .config import verdant_station_names
     key = cfg.source if source is None else source
     label = SOURCE_LABELS.get(key, str(key).replace("_", " ").title())
     if key == "verdant":
-        return label
+        names = verdant_station_names(getattr(cfg, "verdant_sheets", ()))
+        return f"{label} · {' / '.join(names)}" if names else label
     site = (getattr(cfg, "site", "") or "").strip()
     return f"{label} · {site}" if site else label
 
@@ -23,10 +25,13 @@ def figure_prefix(cfg, source=None):
 def style():
     plt.rcParams.update({"font.family": "serif", "font.serif": ["Times New Roman", "DejaVu Serif"],
                          "mathtext.fontset": "stix", "figure.dpi": 110, "axes.grid": True,
-                         "grid.alpha": 0.2, "axes.spines.top": False, "axes.spines.right": False})
+                         "grid.alpha": 0.2, "axes.spines.top": False, "axes.spines.right": False,
+                         "font.size": 14, "axes.labelsize": 15, "axes.titlesize": 15,
+                         "xtick.labelsize": 13, "ytick.labelsize": 13, "legend.fontsize": 12,
+                         "figure.titlesize": 16})
 
 
-def save_figures(assessment, directory):
+def save_figures(assessment, directory, file_prefix=""):
     style()
     tables, cfg = assessment.tables, assessment.settings
     avg = tables["depth_averaged"]
@@ -35,7 +40,7 @@ def save_figures(assessment, directory):
     def save(name, fig):
         fig.suptitle(f"{figure_prefix(cfg)} · {name.replace('_', ' ').title()}")
         fig.tight_layout()
-        path = directory / f"{name}.png"
+        path = directory / f"{file_prefix}{name}.png"
         fig.savefig(path, dpi=160, bbox_inches="tight")
         plt.close(fig)
         paths[name] = path
@@ -92,7 +97,7 @@ def save_figures(assessment, directory):
         ax.bar(bins.speed_center_mps, 100*bins.probability, width=width, color="tab:purple", alpha=0.8)
         for speed, label in ((cfg.cut_in_mps, "Cut-in"), (cfg.rated_speed_mps, "Rated"), (cfg.cut_out_mps, "Cut-out")):
             ax.axvline(speed, color="0.3", ls="--", lw=0.9)
-            ax.text(speed, ax.get_ylim()[1]*0.97, f" {label}", ha="left", va="top", fontsize=9)
+            ax.text(speed, ax.get_ylim()[1]*0.97, f" {label}", ha="left", va="top", fontsize=12)
         ax.set(xlabel=f"Hub streamwise velocity, bin {cfg.hub_bin} (m/s)",
                ylabel=f"Time-weighted probability p(Uᵢ) (%), ΔU = {cfg.speed_bin_width:g} m/s")
         save("hub_velocity_probability", fig)
@@ -126,6 +131,6 @@ def save_figures(assessment, directory):
         save("turbine_power_curve", fig)
     if "postprocessing_catalog" in tables:
         from .original_plots import save_original_figures
-        paths.update(save_original_figures(assessment, directory))
+        paths.update(save_original_figures(assessment, directory, file_prefix=file_prefix))
     rank = {name: i for i, name in enumerate(FIGURE_ORDER)}
     return dict(sorted(paths.items(), key=lambda item: rank.get(item[0], len(rank))))

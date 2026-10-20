@@ -6,18 +6,30 @@ from backend.tidal import preprocess, process
 from backend.tidal.config import Settings
 from backend.tidal.plots import figure_prefix, FIGURE_ORDER
 from backend.tidal.original_plots import _cardinal_direction, _phase_polar_statistics, _polar_title
-from backend.tidal.postprocessing import fixed_period_cosine, original_ti
+from backend.tidal.postprocessing import fixed_period_cosine, original_ti, profile_coordinates
 from test_analysis import synthetic
 
 
+@pytest.mark.parametrize("bins", [[1, 2, 3, 4], [4, 3, 2, 1]])
+def test_legacy_peak_coordinates_put_fastest_bin_at_top(bins):
+    # depth_m below surface; flow is fastest near the surface whichever way bins are numbered.
+    resolved = pd.DataFrame({"bin": bins, "depth_m": [5.0, 15.0, 25.0, 35.0],
+                             "height_above_bed_m": np.nan, "speed_mps": [1.6, 1.4, 1.2, 1.0]})
+    grid = profile_coordinates(resolved, Settings(profile_coordinate_mode="legacy_normalized"), "peak_power")
+    eta = grid.set_index("depth_m").eta
+    assert eta[5.0] == pytest.approx(1.0)
+    assert eta[35.0] == pytest.approx(0.25)
+
+
 def test_figure_titles_follow_the_data_source():
-    assert figure_prefix(Settings(source="verdant", site="LIS1016")) == "Verdant Power"
+    assert figure_prefix(Settings(source="verdant", site="Verdant_A",
+                                  verdant_sheets=("Station A", "Station A-2"))) == "Verdant Power · Station A"
     assert figure_prefix(Settings(source="coops", site="LIS1016")) == "NOAA CO-OPS · LIS1016"
     assert figure_prefix(Settings(source="standard_csv", site="MySite")) == "Standard CSV · MySite"
     assert _polar_title(Settings(source="verdant", verdant_sheets=("Station A", "Station A-2"))) == \
-        "Verdant Power · Tidal Velocity Polar Plot (Station A)"
+        "Verdant Power · Station A · Tidal Velocity Polar Plot"
     assert _polar_title(Settings(source="verdant", verdant_sheets=("Station B", "Station B-2"))) == \
-        "Verdant Power · Tidal Velocity Polar Plot (Station B)"
+        "Verdant Power · Station B · Tidal Velocity Polar Plot"
     assert _polar_title(Settings(source="coops", site="LIS1016")) == \
         "NOAA CO-OPS · LIS1016 · Tidal Velocity Polar Plot"
     assert FIGURE_ORDER.index("tidal_velocity_polar") == FIGURE_ORDER.index("principal_flow_diagnostics") + 1

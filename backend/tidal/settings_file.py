@@ -2,7 +2,7 @@
 from dataclasses import fields
 from pathlib import Path
 import json
-from .config import Settings, verdant_station_preset
+from .config import Settings, coops_station_preset, verdant_station_preset
 
 # Grouping objects in config.json. They are not settings themselves.
 SECTIONS = {
@@ -70,7 +70,9 @@ def load_settings(root, path="config.json"):
             continue
         default = getattr(defaults, key)
         valid = False
-        if key in ("water_depth_m", "rotor_diameter_m"):
+        if key in ("water_depth_m", "rotor_diameter_m", "coops_nominal_water_depth_m",
+                   "coops_instrument_height_above_bed_m", "coops_bin1_center_distance_m",
+                   "coops_bin_size_m"):
             valid = value is None or (isinstance(value, (int, float)) and not isinstance(value, bool))
         elif isinstance(default, bool):
             valid = isinstance(value, bool)
@@ -94,7 +96,15 @@ def load_settings(root, path="config.json"):
             raise ValueError(f"No station preset for verdant_sheets {list(sheets)}; set verdant_heading_offsets, "
                              "excluded_bins and water_depth_m explicitly.")
         for key, value in preset.items():
-            data.setdefault(key, value)
+            # Site and station geometry follow the selected sheets; other keys stay overridable.
+            if key == "site":
+                data[key] = value
+            else:
+                data.setdefault(key, value)
+    elif data["source"] == "coops":
+        # NOAA's deployment metadata are authoritative for the supported
+        # example station and replace stale values carried from another site.
+        data.update(coops_station_preset(data["site"]))
     if "slack_mps" in data and data["slack_mps"] != data.get("cut_in_mps", defaults.cut_in_mps):
         raise ValueError("Slack equals cut-in: remove slack_mps or set it equal to cut_in_mps.")
     cfg = Settings(**data).validate()

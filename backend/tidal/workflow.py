@@ -109,9 +109,12 @@ def hash_file(path):
 def postprocess(assessment):
     if not assessment.processed:
         raise ValueError("Run the processing step before exporting results.")
+    from .config import output_run_name, output_station_tag
     from .plots import save_figures
     stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S_%fZ")
-    run = f"{assessment.settings.site}_{assessment.settings.source}_{stamp}"
+    run = output_run_name(assessment.settings, stamp)
+    file_tag = output_station_tag(assessment.settings)
+    file_prefix = f"{file_tag}_" if file_tag else ""
     output = assessment.root / "outputs"
     csv_dir = output / "csv" / run
     fig_dir = output / "figures" / run
@@ -122,8 +125,8 @@ def postprocess(assessment):
     try:
         for name, frame in assessment.tables.items():
             if len(frame.columns):
-                frame.to_csv(csv_dir / f"{name}.csv", index=False)
-        figure_paths = save_figures(assessment, fig_dir)
+                frame.to_csv(csv_dir / f"{file_prefix}{name}.csv", index=False)
+        figure_paths = save_figures(assessment, fig_dir, file_prefix=file_prefix)
     except Exception as error:
         run_log_path.write_text(json.dumps({"run": run, "status": "failed", "error": str(error), "settings": assessment.settings.to_dict()}, indent=2), encoding="utf-8")
         raise

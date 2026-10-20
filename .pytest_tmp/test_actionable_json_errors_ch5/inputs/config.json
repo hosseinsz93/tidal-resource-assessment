@@ -1,0 +1,1 @@
+{"source": "standard_csv", "site": "Test", "input_path": "inputs/test.csv", "energy_enabled": false, "power_curve_points": [[0, "bad"], [1, 2]]}

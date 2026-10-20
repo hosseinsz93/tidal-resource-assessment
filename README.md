@@ -19,15 +19,15 @@ Already have the environment? Update it with `conda env update -n resource-asses
 
 ## Water depth
 
-Add the total water depth at the ADCP in **[config.json](config.json)**, field `data_and_quality.water_depth_m`, in metres. Only one value is active at a time; change it whenever you switch source or Verdant station. Use `null` if the depth is unknown (physical log-law fits are then skipped).
+Add the total water depth at the ADCP in **[config.json](config.json)**, field `data_and_quality.water_depth_m`, in metres. Only one value is active at a time; change it whenever you switch source or Verdant station. Use `null` if the depth is unknown (physical log-law fits are then skipped). The verified LIS1016 station preset supplies its deployment geometry automatically.
 
 | Site | `water_depth_m` | Source |
 |---|---|---|
 | Verdant Station A | `24.0` | ADCP deployment depth |
 | Verdant Station B (current `config.json`) | `26.9` | ADCP deployment depth |
-| CO-OPS LIS1016 (Cornfield Point, 4 miles south of Buoy CF) | `37.8` | 124 ft from [NOAA current predictions](https://tidesandcurrents.noaa.gov/noaacurrents/predictions.html?id=LIS1016_1) |
+| CO-OPS LIS1016 (Cornfield Point, 4 miles south of Buoy CF) | `47.18` | Pressure-derived deployment depth from [NOAA deployment metadata](https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/LIS1016/deployments.json) |
 
-For a new site, enter the confirmed deployment or station depth in that same field. See [CONFIGURATION.md](CONFIGURATION.md).
+For LIS1016, the loader treats the NOAA bin depths as depths below the surface and converts them to 9.41--41.42 m above bed. The independent ADCP geometry is checked at load time using the 5.18 m instrument height, 4.23 m bin-1 center distance, and 2.0 m cell size from the [NOAA bin metadata](https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/LIS1016/bins.json). For a new site, enter the confirmed deployment or station depth and geometry. See [CONFIGURATION.md](CONFIGURATION.md).
 
 ## Where everything goes
 
@@ -75,7 +75,7 @@ Velocity profiles show negative ebb on the left and positive flood on the right.
 
 The example flood reference and turbine are specific to Long Island Sound. Check these for a new site. The backend uses named columns rather than legacy positional layouts. Depth averages are arithmetic vector means over measured bins. Sample weights assume ensemble-start timestamps, cap support across large gaps at nominal cadence, and assign one nominal interval to the last record.
 
-**Scientific scope:** six/ten-minute averaged velocities provide resolved variability, not full burst-scale turbulence. The workflow does not infer a noise floor spectrally from these coarse records. Unknown depth datum is never guessed from velocity gradients; unsupported physical fits are skipped. Log fitting requires total water depth and three near-bed points. AEP assumes a representative annual distribution. This implementation is not an IEC certification.
+**Scientific scope:** six/ten-minute averaged velocities provide resolved variability, not full burst-scale turbulence. The workflow does not infer a noise floor spectrally from these coarse records. Unknown depth datum is never guessed from velocity gradients; unsupported physical fits are skipped. LIS1016 uses verified NOAA deployment geometry. Log fitting requires total water depth and three near-bed points. AEP assumes a representative annual distribution. This implementation is not an IEC certification.
 
 All original postprocessing is accessible through the notebook's result-table selector and figure gallery. The exported checklist and [postprocessing mapping](backend/POSTPROCESSING_PARITY.md) identify the corresponding outputs. Original normalized profile fits and original TI definitions are retained separately from physical-coordinate fits and newer residual-intensity measures; legacy inferred coordinates are not physical bed geometry.
 

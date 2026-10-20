@@ -53,14 +53,18 @@ def test_sectioned_config_flattens(tmp_path):
         load_settings(tmp_path, path)
 
 
-@pytest.mark.parametrize('sheets,offsets,bins,depth', [
-    (["Station A", "Station A-2"], (-0.07, 0.04), (39, 40, 41, 42, 43), 24.0),
-    (["Station B", "Station B-2"], (-5.53, 3.2), (45, 46, 47, 48, 49), 26.9)])
-def test_verdant_station_preset_follows_sheets(tmp_path, sheets, offsets, bins, depth):
-    cfg = load_settings(tmp_path, write_config(tmp_path, source="verdant", verdant_sheets=sheets))
+@pytest.mark.parametrize('sheets,site,offsets,bins,depth', [
+    (["Station A", "Station A-2"], "Verdant_A", (-0.07, 0.04), (39, 40, 41, 42, 43), 24.0),
+    (["Station B", "Station B-2"], "Verdant_B", (-5.53, 3.2), (45, 46, 47, 48, 49), 26.9)])
+def test_verdant_station_preset_follows_sheets(tmp_path, sheets, site, offsets, bins, depth):
+    from backend.tidal.config import output_run_name, output_station_tag
+    cfg = load_settings(tmp_path, write_config(tmp_path, source="verdant", site="LIS1016", verdant_sheets=sheets))
+    assert cfg.site == site
     assert cfg.verdant_heading_offsets == offsets
     assert cfg.excluded_bins == bins
     assert cfg.water_depth_m == depth
+    assert output_station_tag(cfg) == site.replace("Verdant_", "Station")
+    assert output_run_name(cfg, "stamp") == f"{site}_verdant_{output_station_tag(cfg)}_stamp"
     cfg = load_settings(tmp_path, write_config(tmp_path, source="verdant", verdant_sheets=sheets, water_depth_m=20.0))
     assert cfg.water_depth_m == 20.0
 
@@ -68,6 +72,21 @@ def test_verdant_station_preset_follows_sheets(tmp_path, sheets, offsets, bins, 
 def test_unknown_verdant_sheets_need_explicit_values(tmp_path):
     with pytest.raises(ValueError, match="No station preset"):
         load_settings(tmp_path, write_config(tmp_path, source="verdant", verdant_sheets=["Station C"]))
+
+
+def test_lis1016_uses_verified_noaa_deployment_metadata(tmp_path):
+    cfg = load_settings(tmp_path, write_config(
+        tmp_path, source="coops", site="LIS1016", coops_depth_reference="unknown",
+        water_depth_m=37.8, flood_reference_deg=252.38))
+    assert cfg.coops_depth_reference == "below_surface"
+    assert cfg.coops_adcp_orientation == "upward"
+    assert cfg.coops_nominal_water_depth_m == pytest.approx(47.0)
+    assert cfg.water_depth_m == pytest.approx(47.18)
+    assert cfg.coops_instrument_height_above_bed_m == pytest.approx(5.18)
+    assert cfg.coops_bin1_center_distance_m == pytest.approx(4.23)
+    assert cfg.coops_bin_size_m == pytest.approx(2.0)
+    assert cfg.flood_reference_deg == pytest.approx(250.0)
+    assert cfg.near_bed_fraction == pytest.approx(0.30)
 
 
 def test_duplicate_keys_rejected(tmp_path):

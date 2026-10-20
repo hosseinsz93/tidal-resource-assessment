@@ -8,7 +8,7 @@ from datetime import datetime
 import re
 import numpy as np
 import pandas as pd
-from .config import Dataset, input_file
+from .config import Dataset, apply_coops_station_preset, input_file
 
 
 def speed_scale(header):
@@ -30,6 +30,7 @@ def rotate_heading(east, north, offset):
 
 
 def load_coops(path, settings):
+    preset = apply_coops_station_preset(settings)
     paths = sorted(path.glob("*.csv")) if path.is_dir() else [path]
     pattern = re.compile(r"^([A-Za-z0-9]+)_(\d+)m(\d+)cm-.*\.csv$", re.I)
     found = []
@@ -39,7 +40,17 @@ def load_coops(path, settings):
             found.append((file, int(match[2]) + int(match[3]) / 100))
     if not found:
         raise ValueError(f"No depth-bin CSVs for {settings.site} in {path}. Annual event predictions are not depth-bin observations.")
-    bins = {depth: i + 1 for i, depth in enumerate(sorted({d for _, d in found}))}
+    depths = sorted({d for _, d in found}, reverse=settings.coops_adcp_orientation == "upward")
+    geometry = (settings.water_depth_m, settings.coops_instrument_height_above_bed_m,
+                settings.coops_bin1_center_distance_m, settings.coops_bin_size_m)
+    if settings.coops_depth_reference == "below_surface" and all(value is not None for value in geometry):
+        first_height = settings.coops_instrument_height_above_bed_m + settings.coops_bin1_center_distance_m
+        bins = {depth: int(round((settings.water_depth_m - depth - first_height)
+                                 / settings.coops_bin_size_m)) + 1 for depth in depths}
+        if len(set(bins.values())) != len(bins) or min(bins.values()) < 1:
+            raise ValueError("CO-OPS depths cannot be mapped uniquely to the configured ADCP bin geometry.")
+    else:
+        bins = {depth: i + 1 for i, depth in enumerate(depths)}
     frames = []
     for file, depth in found:
         raw = pd.read_csv(file)
@@ -67,8 +78,27 @@ def load_coops(path, settings):
         messages.append("CO-OPS timestamps retain the downloaded clock; its timezone is unspecified. Confirm it before external time comparisons.")
     if settings.coops_depth_reference == "unknown":
         messages.append("CO-OPS depth datum is unconfirmed. Depth profiles are available; physical log/power fits require a confirmed height above bed.")
-    return Dataset(pd.concat(frames, ignore_index=True),
-                   {"source": "coops", "site": settings.site, "time_zone": settings.time_zone},
+    elif settings.coops_depth_reference == "below_surface" and settings.water_depth_m is not None:
+        messages.append(
+            f"CO-OPS depths were converted to height above bed using the verified {settings.water_depth_m:g} m "
+            "pressure-derived deployment depth."
+        )
+    metadata = {"source": "coops", "site": settings.site, "time_zone": settings.time_zone,
+                "depth_reference": settings.coops_depth_reference,
+                "adcp_orientation": settings.coops_adcp_orientation,
+                "water_depth_m": settings.water_depth_m}
+    if preset:
+        metadata["deployment_metadata"] = {
+            "nominal_water_depth_m": settings.coops_nominal_water_depth_m,
+            "pressure_derived_water_depth_m": settings.water_depth_m,
+            "instrument_height_above_bed_m": settings.coops_instrument_height_above_bed_m,
+            "bin1_center_distance_m": settings.coops_bin1_center_distance_m,
+            "bin_size_m": settings.coops_bin_size_m,
+            "flood_reference_degT": settings.flood_reference_deg,
+            "deployment_url": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/LIS1016/deployments.json",
+            "bins_url": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/LIS1016/bins.json",
+        }
+    return Dataset(pd.concat(frames, ignore_index=True), metadata,
                    messages, [str(f) for f, _ in found])
 
 
@@ -176,6 +206,21 @@ def validate_dataset(dataset, settings):
         heights = frame.height_above_bed_m.dropna()
         if (heights < 0).any() or (heights > settings.water_depth_m).any():
             raise ValueError("Depth coordinates are incompatible with the specified total water depth.")
+    geometry = (settings.coops_instrument_height_above_bed_m,
+                settings.coops_bin1_center_distance_m, settings.coops_bin_size_m)
+    if settings.source == "coops" and all(value is not None for value in geometry):
+        bin_geometry = frame[["bin", "height_above_bed_m"]].drop_duplicates().sort_values("bin")
+        expected = (settings.coops_instrument_height_above_bed_m
+                    + settings.coops_bin1_center_distance_m
+                    + settings.coops_bin_size_m * (bin_geometry.bin.to_numpy() - 1))
+        difference = np.abs(bin_geometry.height_above_bed_m.to_numpy() - expected)
+        if not np.isfinite(difference).all() or (difference > 0.05).any():
+            raise ValueError("CO-OPS bin depths disagree with the configured ADCP orientation or deployment geometry.")
+        dataset.metadata["height_above_bed_range_m"] = [
+            float(bin_geometry.height_above_bed_m.min()),
+            float(bin_geometry.height_above_bed_m.max()),
+        ]
+        dataset.metadata["height_geometry_max_difference_m"] = float(difference.max())
     if frame.empty or not frame.valid_velocity.any():
         raise ValueError("No valid velocities remain after bin selection and quality control.")
     times = frame.time.drop_duplicates().sort_values()

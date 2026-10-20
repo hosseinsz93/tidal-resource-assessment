@@ -11,17 +11,7 @@ def _cardinal_direction(angle):
 
 
 def _polar_title(cfg):
-    if cfg.source != "verdant":
-        return f"{figure_prefix(cfg)} · Tidal Velocity Polar Plot"
-    stations = []
-    for sheet in cfg.verdant_sheets:
-        station = str(sheet).strip()
-        if station.endswith("-2"):
-            station = station[:-2]
-        if station and station not in stations:
-            stations.append(station)
-    suffix = f" ({' / '.join(stations)})" if stations else ""
-    return f"Verdant Power · Tidal Velocity Polar Plot{suffix}"
+    return f"{figure_prefix(cfg)} · Tidal Velocity Polar Plot"
 
 
 def _phase_polar_statistics(resolved, bearing):
@@ -45,7 +35,7 @@ def _display_sample(frame, limit=30000):
     return frame.iloc[np.linspace(0, len(frame)-1, limit, dtype=int)]
 
 
-def save_original_figures(assessment, directory):
+def save_original_figures(assessment, directory, file_prefix=""):
     t, cfg = assessment.tables, assessment.settings
     avg = t["depth_averaged"]
     paths = {}
@@ -54,12 +44,12 @@ def save_original_figures(assessment, directory):
         heading = figure_prefix(cfg) if prefix is None else prefix
         fig.suptitle(title or f"{heading} · {name.strip('_').replace('_', ' ')}")
         if note:
-            fig.text(.5, .01, note, ha="center", fontsize=8)
+            fig.text(.5, .01, note, ha="center", fontsize=11)
         if polar_layout:
             fig.subplots_adjust(left=.05, right=.72, bottom=.09, top=.88)
         else:
             fig.tight_layout(rect=(0, .035 if note else 0, 1, .97))
-        path = directory / f"{name}.png"
+        path = directory / f"{file_prefix}{name}.png"
         fig.savefig(path, dpi=160, bbox_inches="tight")
         plt.close(fig)
         paths[name] = path
@@ -97,7 +87,7 @@ def save_original_figures(assessment, directory):
         if np.isfinite(bearing) and np.isfinite(speed):
             angle = np.deg2rad(bearing)
             compass.plot([angle, angle], [0, speed], color=COLORS[phase], marker="o", label=f"{phase.title()} {bearing:.1f}°T")
-    compass.legend(loc="upper left", bbox_to_anchor=(1.05, 1), fontsize=8)
+    compass.legend(loc="upper left", bbox_to_anchor=(1.05, 1), fontsize=11)
     save("_FlowSummary", fig)
 
     fig, ax = plt.subplots(figsize=(11, 3.5))
@@ -126,13 +116,13 @@ def save_original_figures(assessment, directory):
     angle = np.linspace(0, 2*np.pi, 200)
     mean = vectors.mean(axis=0)
     ellipse = (vec @ np.diag(np.sqrt(np.maximum(val, 0))) @ np.array([np.cos(angle), np.sin(angle)])).T+mean
-    axs[0].plot(ellipse[:, 0], ellipse[:, 1], color="tab:orange", label="1σ ellipse")
+    axs[0].plot(ellipse[:, 0], ellipse[:, 1], color="tab:orange", label="std. ellipse")
     radius = np.max(np.linalg.norm(vectors, axis=1))
     phi = np.deg2rad(assessment.bearing)
     axs[0].plot(mean[0]+np.array([-1, 1])*radius*np.sin(phi), mean[1]+np.array([-1, 1])*radius*np.cos(phi), "k--", label="Principal axis")
     axs[0].set(xlabel="East (m/s)", ylabel="North (m/s)")
     axs[0].set_aspect("equal", adjustable="datalim")
-    axs[0].legend(fontsize=8)
+    axs[0].legend(fontsize=11)
     pdf, cdf = t["signed_velocity_distribution"], t["signed_velocity_cdf"]
     axs[1].bar((pdf.velocity_lo_mps+pdf.velocity_hi_mps)/2, pdf.pdf, width=pdf.velocity_hi_mps-pdf.velocity_lo_mps, color="tab:green",
                 edgecolor="k", linewidth=.6, linestyle="-")
@@ -177,7 +167,7 @@ def save_original_figures(assessment, directory):
                     arrowprops={"arrowstyle": "-|>", "color": COLORS[phase],
                                 "lw": 2.2, "mutation_scale": 18}, zorder=5)
         ax.text(angle, length*1.04, f"{direction:.1f}°", color=COLORS[phase],
-                fontsize=10, fontweight="bold", ha="center", va="center")
+                fontsize=13, fontweight="bold", ha="center", va="center")
         ax.plot([], [], color=COLORS[phase], lw=2.2,
                 label=f"{phase.title()} mean direction ({direction:.1f}°)")
     ax.set_theta_zero_location("N")
@@ -190,7 +180,7 @@ def save_original_figures(assessment, directory):
     ax.set_yticklabels([f"{value:.1f} m/s" for value in radial_ticks])
     ax.set_rlabel_position(78)
     ax.grid(True, color="0.45", ls="--", lw=.7, alpha=.75)
-    legend = ax.legend(loc="upper left", bbox_to_anchor=(1.03, 1.08), fontsize=9,
+    legend = ax.legend(loc="upper left", bbox_to_anchor=(1.03, 1.08), fontsize=12,
                        frameon=True, fancybox=False)
     for handle in legend.legend_handles:
         handle.set_alpha(1)
@@ -203,7 +193,7 @@ def save_original_figures(assessment, directory):
                        if np.isfinite(direction) else f"{label} direction: unavailable")
         summary.append(f"Mean {label.lower()} velocity: {row['mean_speed_mps']:.2f} m/s"
                        if np.isfinite(row["mean_speed_mps"]) else f"Mean {label.lower()} velocity: unavailable")
-    fig.text(.75, .12, "\n".join(summary), ha="left", va="bottom", fontsize=10, linespacing=1.35)
+    fig.text(.75, .12, "\n".join(summary), ha="left", va="bottom", fontsize=13, linespacing=1.35)
     note = "Radius: horizontal velocity; angles: degrees true"
     if displayed < len(polar):
         note += f"; evenly displayed {displayed:,} of {len(polar):,} valid bin records"
@@ -245,9 +235,9 @@ def save_original_figures(assessment, directory):
                     mantissa, exponent = f"{r.z0_over_h:.2e}".split("e")
                     lines.append(rf"Loglaw: $u_*={r.u_star_mps:.3f}$ m/s, "
                                  rf"$z_0/h={mantissa}\times10^{{{int(exponent)}}}$, $R^2={r.r_squared:.3f}$")
-            ax.set_title("\n".join(lines), fontsize=9)
+            ax.set_title("\n".join(lines), fontsize=12)
             ax.set(xlabel="Streamwise velocity (m/s)")
-            ax.legend(fontsize=8)
+            ax.legend(fontsize=11)
         axs[0].set_ylabel("Normalized height ")
         save("Velocity_profiles", fig)
 
@@ -255,16 +245,14 @@ def save_original_figures(assessment, directory):
     if len(ti):
         fig, axs = plt.subplots(1, 2, figsize=(10, 5), sharey=True)
         for phase in ("FLOOD", "EBB"):
-            sub = ti[ti.phase == phase].sort_values("depth_m")
+            sub = ti[ti.phase == phase].sort_values("eta")
             for ax, column in zip(axs, ("TI_from_fluct_percent", "TI_doppler_corrected_percent")):
-                ax.plot(sub[column], sub.depth_m, "o-", color=COLORS[phase], label=phase.title())
+                ax.plot(sub[column], sub.eta, "o-", color=COLORS[phase], label=phase.title())
         noise_title = rf"Noise-corrected · $σ_{{\text{{noise}}}}$={cfg.noise_std_mps:g} m/s"
         for ax, title in zip(axs, ("Raw original TI formula", noise_title)):
             ax.set(title=title, xlabel="Intensity (%)")
             ax.legend()
-        axs[0].set_ylabel("Reported bin coordinate (m)")
-        if assessment.dataset.data.depth_reference.eq("below_surface").all():
-            axs[0].invert_yaxis()
+        axs[0].set_ylabel("Normalized height")
         save("TI_original_profiles", fig, "Ensemble-resolved variability; rolling horizontal-velocity denominator")
 
     fig, axs = plt.subplots(1, 2, figsize=(10, 5), subplot_kw={"projection": "polar"})
@@ -281,7 +269,7 @@ def save_original_figures(assessment, directory):
         fig, ax = plt.subplots(figsize=(8, 4))
         for phase in ("FLOOD", "EBB"):
             ax.plot(bins.U_center_mps, bins[f"f_{phase.lower()}"], color=COLORS[phase], label=phase.title())
-        ax.set(xlabel="Absolute signed hub velocity (m/s)", ylabel="Unconditional probability")
+        ax.set(xlabel="Absolute hub velocity (m/s)", ylabel="Probability")
         ax.legend()
         save("ebb_flood_probabilities", fig, "Direction from hub-velocity sign; includes near-slack flow, unlike threshold phase labels")
         aep = t["turbine_aep_summary"].iloc[0]
@@ -303,7 +291,7 @@ def save_original_figures(assessment, directory):
             for phase, mask in (("FLOOD", sub.signed_speed_mps > 0), ("EBB", sub.signed_speed_mps < 0)):
                 ax.scatter(sub.time[mask], sub.signed_speed_mps[mask], s=3, color=COLORS[phase], label=f"{phase.title()} peak")
             ax.axhline(0, color="k", lw=.5)
-            ax.legend(loc="upper right", fontsize=8, markerscale=3)
+            ax.legend(loc="upper right", fontsize=11, markerscale=3)
             ax.set(title=f"NOAA CO-OPS · {row.site} · {row.time_reference}", ylabel="Predicted event velocity (m/s)")
         fig.autofmt_xdate()
         save("annual_comparison", fig, "Nonuniform prediction events, shown separately from measured ADCP results", prefix="NOAA CO-OPS")

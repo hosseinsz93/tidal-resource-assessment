@@ -2,7 +2,7 @@
 from dataclasses import fields
 from pathlib import Path
 import json
-from .config import Settings, verdant_station_preset
+from .config import Settings, coops_station_preset, verdant_station_preset
 
 
 class SetupPanel:
@@ -36,6 +36,11 @@ class SetupPanel:
         data = [source, add("site", w.Text, "Site / run name"), add("input_path", w.Text, "Input folder or CSV"),
                 add("time_zone", w.Text, "Source time zone"),
                 add("coops_depth_reference", w.Dropdown, "CO-OPS depth datum", options=[("Unconfirmed", "unknown"), ("Below surface", "below_surface"), ("Above bed", "above_bed")]),
+                add("coops_adcp_orientation", w.Dropdown, "CO-OPS ADCP orientation", options=[("Unconfirmed", "unknown"), ("Upward-looking", "upward"), ("Downward-looking", "downward")]),
+                add("coops_nominal_water_depth_m", w.Text, "CO-OPS nominal depth (m)"),
+                add("coops_instrument_height_above_bed_m", w.Text, "CO-OPS instrument HAB (m)"),
+                add("coops_bin1_center_distance_m", w.Text, "CO-OPS bin-1 distance (m)"),
+                add("coops_bin_size_m", w.Text, "CO-OPS bin size (m)"),
                 add("verdant_sheets", w.Text, "Verdant sheet names"),
                 add("verdant_heading_offsets", w.Text, "Heading offsets (degrees)"),
                 add("excluded_bins", w.Text, "Exclude bins (comma list)"),
@@ -135,9 +140,18 @@ class SetupPanel:
         for key, value in presets[change["new"]].items():
             self.controls[key].value = value
         # Source-specific geometry and excluded bins must not silently carry over.
-        self.controls["water_depth_m"].value = "37.8" if change["new"] == "coops" else ""
+        for key in ("coops_nominal_water_depth_m", "coops_instrument_height_above_bed_m",
+                    "coops_bin1_center_distance_m", "coops_bin_size_m"):
+            self.controls[key].value = ""
+        self.controls["coops_depth_reference"].value = "unknown"
+        self.controls["coops_adcp_orientation"].value = "unknown"
+        self.controls["water_depth_m"].value = ""
         self.controls["excluded_bins"].value = ""
-        if change["new"] == "verdant":
+        if change["new"] == "coops":
+            for key, value in coops_station_preset(self.controls["site"].value).items():
+                if key in self.controls:
+                    self.controls[key].value = str(value) if isinstance(self.controls[key], self.w.Text) else value
+        elif change["new"] == "verdant":
             self._apply_station_preset()
         if change["new"] in {"coops", "verdant"}:
             self.controls["ensemble_minutes"].value = 60 if change["new"] == "coops" else 10
@@ -152,6 +166,8 @@ class SetupPanel:
         self.controls["verdant_heading_offsets"].value = ", ".join(f"{x:g}" for x in preset["verdant_heading_offsets"])
         self.controls["excluded_bins"].value = ", ".join(str(b) for b in preset["excluded_bins"])
         self.controls["water_depth_m"].value = f"{preset['water_depth_m']:g}"
+        if "site" in preset and "site" in self.controls:
+            self.controls["site"].value = preset["site"]
 
     def get_settings(self):
         if self.widget is None:
@@ -162,7 +178,9 @@ class SetupPanel:
                 values[key] = tuple(converter(v.strip()) for v in values[key].split(",") if v.strip())
             except ValueError as error:
                 raise ValueError(f"Check the comma-separated values for {key}.") from error
-        values["water_depth_m"] = float(values["water_depth_m"]) if values["water_depth_m"].strip() else None
+        for key in ("water_depth_m", "coops_nominal_water_depth_m", "coops_instrument_height_above_bed_m",
+                    "coops_bin1_center_distance_m", "coops_bin_size_m"):
+            values[key] = float(values[key]) if values[key].strip() else None
         return Settings(**values).validate()
 
     def _check(self, _):

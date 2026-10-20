@@ -7,15 +7,77 @@ import re
 
 # Station-specific Verdant values, selected from verdant_sheets (see CONFIGURATION.md, Verdant stations).
 VERDANT_STATIONS = {
-    ("Station A", "Station A-2"): {"verdant_heading_offsets": (-0.07, 0.04),
+    ("Station A", "Station A-2"): {"site": "Verdant_A", "verdant_heading_offsets": (-0.07, 0.04),
                                    "excluded_bins": (39, 40, 41, 42, 43), "water_depth_m": 24.0},
-    ("Station B", "Station B-2"): {"verdant_heading_offsets": (-5.53, 3.20),
+    ("Station B", "Station B-2"): {"site": "Verdant_B", "verdant_heading_offsets": (-5.53, 3.20),
                                    "excluded_bins": (45, 46, 47, 48, 49), "water_depth_m": 26.9},
 }
+
+# Verified NOAA deployment metadata for supported CO-OPS examples. These values
+# are applied only when the matching station is selected; other CO-OPS sites
+# remain explicit user inputs.
+COOPS_STATIONS = {
+    "LIS1016": {
+        "coops_depth_reference": "below_surface",
+        "coops_adcp_orientation": "upward",
+        "coops_nominal_water_depth_m": 47.0,
+        "water_depth_m": 47.18,
+        "coops_instrument_height_above_bed_m": 5.18,
+        "coops_bin1_center_distance_m": 4.23,
+        "coops_bin_size_m": 2.0,
+        "flood_reference_deg": 250.0,
+        # The lowest three cells extend to z/h = 0.284; 0.30 keeps a
+        # three-point physical log-law fit without automatic expansion.
+        "near_bed_fraction": 0.30,
+    },
+}
+
+
+def coops_station_preset(site):
+    """Verified deployment geometry for a supported NOAA CO-OPS station."""
+    return COOPS_STATIONS.get(str(site).strip().upper(), {})
+
+
+def apply_coops_station_preset(settings):
+    """Apply authoritative station metadata to an in-memory settings object."""
+    preset = coops_station_preset(settings.site) if settings.source == "coops" else {}
+    for key, value in preset.items():
+        setattr(settings, key, value)
+    return preset
 
 
 def verdant_station_preset(sheets):
     return VERDANT_STATIONS.get(tuple(sheets), {})
+
+
+def verdant_station_names(sheets):
+    """Unique station labels from sheet names, e.g. Station A / Station A-2 -> ['Station A']."""
+    names = []
+    for sheet in sheets or ():
+        name = str(sheet).strip()
+        if name.endswith("-2"):
+            name = name[:-2].rstrip()
+        if name and name not in names:
+            names.append(name)
+    return names
+
+
+def output_station_tag(settings):
+    """Path-safe station tag for Verdant run folders and exported file names."""
+    if getattr(settings, "source", None) != "verdant":
+        return ""
+    names = verdant_station_names(getattr(settings, "verdant_sheets", ()))
+    return "".join(name.replace(" ", "") for name in names)
+
+
+def output_run_name(settings, stamp):
+    """Unique export folder name: site_source[_StationA]_timestamp."""
+    parts = [settings.site, settings.source]
+    tag = output_station_tag(settings)
+    if tag:
+        parts.append(tag)
+    parts.append(stamp)
+    return "_".join(parts)
 
 
 @dataclass
@@ -25,6 +87,11 @@ class Settings:
     input_path: str = "inputs/coops/depth_bins"
     time_zone: str = "unspecified"  # Do not guess a CO-OPS download's timezone.
     coops_depth_reference: str = "unknown"
+    coops_adcp_orientation: str = "unknown"
+    coops_nominal_water_depth_m: float | None = None
+    coops_instrument_height_above_bed_m: float | None = None
+    coops_bin1_center_distance_m: float | None = None
+    coops_bin_size_m: float | None = None
     verdant_sheets: tuple = ("Station B", "Station B-2")
     verdant_heading_offsets: tuple = (-5.53, 3.20)
     excluded_bins: tuple = ()
@@ -75,6 +142,8 @@ class Settings:
             raise ValueError("Profile coordinates must be physical or legacy_normalized.")
         if self.coops_depth_reference not in {"unknown", "below_surface", "above_bed"}:
             raise ValueError("Depth reference must be unknown, below_surface, or above_bed.")
+        if self.coops_adcp_orientation not in {"unknown", "upward", "downward"}:
+            raise ValueError("CO-OPS ADCP orientation must be unknown, upward, or downward.")
         positive = ["max_speed_mps", "gap_factor", "min_cycle_hours",
                     "max_cycle_hours", "ensemble_minutes", "rated_kw", "speed_bin_width"]
         for name in positive:
@@ -114,6 +183,16 @@ class Settings:
             raise ValueError("Cycle limits must increase and gap factor must exceed 1.")
         if self.water_depth_m is not None and (not math.isfinite(self.water_depth_m) or self.water_depth_m <= 0):
             raise ValueError("Water depth must be positive, or None when unknown.")
+        geometry = ("coops_nominal_water_depth_m", "coops_instrument_height_above_bed_m",
+                    "coops_bin1_center_distance_m", "coops_bin_size_m")
+        for name in geometry:
+            value = getattr(self, name)
+            if value is not None and (not math.isfinite(value) or value <= 0):
+                raise ValueError(f"{name} must be positive, or None when unknown.")
+        cell_geometry = (self.coops_instrument_height_above_bed_m,
+                         self.coops_bin1_center_distance_m, self.coops_bin_size_m)
+        if any(value is not None for value in cell_geometry) and not all(value is not None for value in cell_geometry):
+            raise ValueError("CO-OPS cell geometry requires instrument height, bin-1 center distance, and bin size together.")
         if len(self.verdant_sheets) != len(self.verdant_heading_offsets):
             raise ValueError("Give one heading offset for each Verdant sheet/workbook.")
         if any(not math.isfinite(x) for x in self.verdant_heading_offsets):

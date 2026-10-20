@@ -112,6 +112,8 @@ def resource_metrics(avg, resolved, cfg):
 
 
 def profile_coordinates(resolved, cfg, kind):
+    if "height_above_bed_m" not in resolved:
+        resolved = resolved.assign(height_above_bed_m=np.nan)
     grid = resolved.groupby("bin").agg(depth_m=("depth_m", "first"),
         height_above_bed_m=("height_above_bed_m", "first"), mean_speed_mps=("speed_mps", "mean")).reset_index().sort_values("bin")
     if cfg.profile_coordinate_mode == "physical":
@@ -124,8 +126,9 @@ def profile_coordinates(resolved, cfg, kind):
         valid = grid.mean_speed_mps.notna()
         corr = grid.loc[valid, ["depth_m", "mean_speed_mps"]].corr().iloc[0, 1] if valid.sum() > 1 else np.nan
         if kind == "peak_power":
-            # Retain the original 1/N .. 1 bin-rank normalization.
-            rank = np.arange(1, len(grid)+1, dtype=float)
+            # Retain the original 1/N .. 1 rank normalization, ranked by depth_m because bin
+            # numbering runs bed-upward for upward-looking ADCPs.
+            rank = grid.depth_m.rank(method="first").to_numpy()
             grid["eta"] = (len(grid)-rank+1)/len(grid) if corr < 0 else rank/len(grid)
         else:
             span = grid.depth_m.max()-grid.depth_m.min()
@@ -237,11 +240,15 @@ def original_ti(avg, resolved, cfg):
                 "noise_std_mps": cfg.noise_std_mps, "noise_variance_clipped": bool(variance < 0)}
     pieces = [residuals(sub) for _, sub in resolved.groupby("bin")]
     dep = pd.concat(pieces, ignore_index=True) if pieces else pd.DataFrame()
-    per_bin = [summarize(sub, {"bin": b, "phase": phase, "depth_m": sub.depth_m.iloc[0]}) for (b, phase), sub in dep.groupby(["bin", "phase"])]
+    per_bin = pd.DataFrame([summarize(sub, {"bin": b, "phase": phase, "depth_m": sub.depth_m.iloc[0]})
+                            for (b, phase), sub in dep.groupby(["bin", "phase"])])
+    if len(per_bin):
+        grid = profile_coordinates(resolved, cfg, "peak_power")[["bin", "eta", "coordinate_basis"]]
+        per_bin = per_bin.merge(grid, on="bin", how="left")
     pooled = [summarize(sub, {"phase": phase}) for phase, sub in dep.groupby("phase")]
     averaged = residuals(avg)
     mean = [summarize(sub, {"phase": phase}) for phase, sub in averaged.groupby("phase")]
-    return {"ti_original_by_bin": pd.DataFrame(per_bin), "ti_original_depth_pooled": pd.DataFrame(pooled),
+    return {"ti_original_by_bin": per_bin, "ti_original_depth_pooled": pd.DataFrame(pooled),
             "ti_original_depth_averaged": pd.DataFrame(mean)}
 
 

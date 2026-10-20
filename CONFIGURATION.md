@@ -23,12 +23,25 @@ bearing, depth metadata and turbine assumptions):
 | input_path | `inputs/coops/depth_bins` | `inputs/verdant` | `inputs/custom/my_adcp.csv` |
 | time_zone | `unspecified` | `UTC` | Actual timestamp reference |
 | excluded_bins | `[]` | `[45,46,47,48,49]` | Reviewed exclusions |
-| water_depth_m | `37.8` (124 ft) | `26.9` (Station B) or `24.0` (Station A) | Confirmed site depth or `null` |
+| water_depth_m | `47.18` (automatic LIS1016 preset) | `26.9` (Station B) or `24.0` (Station A) | Confirmed site depth or `null` |
 | ensemble_minutes | `60` | `10` | Instrument ensemble length |
 | hub_bin | `13` | `13` | Existing selected bin |
 
 Verdant sheet names and heading offsets are already present in the global file. Parameters
 specific to an inactive source are ignored. Slack is derived automatically from cut-in.
+
+### CO-OPS LIS1016
+
+When `source` is `coops` and `site` is `LIS1016`, the loader applies the verified NOAA
+deployment metadata automatically. It uses an upward-looking orientation, pressure-derived
+water depth of 47.18 m, instrument height of 5.18 m above bed, 4.23 m from the instrument to
+the center of bin 1, a 2.0 m bin size, and a 250 degree flood reference. Bin numbers therefore
+increase upward from the bed: bin 1 is the 37.77 m depth-below-surface cell and bin 9 is the
+21.76 m cell. Heights are calculated as `47.18 - depth_m`, giving 9.41--41.42 m above bed,
+and are checked against the independent instrument-geometry calculation. The preset uses
+`near_bed_fraction = 0.30`, which includes the lowest three cells in the physical log-law fit.
+See the official [deployment metadata](https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/LIS1016/deployments.json)
+and [bin metadata](https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/LIS1016/bins.json).
 
 ### Verdant stations
 
@@ -37,12 +50,17 @@ setting only `verdant_sheets`. The heading offsets, excluded bins and water dept
 filled in automatically. A value written explicitly in `config.json` overrides the preset; leave
 those keys out unless you mean to override them. Sheet names without a preset require all three.
 
-| Field | Station B | Station A (current `config.json`) |
+| Field | Station B (current `config.json`) | Station A |
 |---|---|---|
 | verdant_sheets | `["Station B", "Station B-2"]` | `["Station A", "Station A-2"]` |
+| site | `Verdant_B` | `Verdant_A` |
 | verdant_heading_offsets | `[-5.53, 3.2]` | `[-0.07, 0.04]` |
 | excluded_bins | `[45, 46, 47, 48, 49]` | `[39, 40, 41, 42, 43]` |
 | water_depth_m | `26.9` | `24.0` |
+
+Exported run folders, CSV names and figure files include the station tag
+(`StationA` or `StationB`), e.g. `outputs/csv/Verdant_A_verdant_StationA_<timestamp>/`
+and `StationA_energy_bins.csv`. Figure titles also show the station.
 
 Station B has 49 bins (about 1.67–25.67 m). Station A has 43 bins (about 1.67–22.67 m).
 The excluded bins are the uppermost, near-surface bins. Their valid-velocity fraction falls
@@ -97,12 +115,17 @@ omitted optional fields use backend defaults. Slack is derived from cut-in, not 
 | input_path | Observation folder or standard CSV path |
 | time_zone | Source timestamp reference; `unspecified` if unknown; Verdant uses UTC |
 | coops_depth_reference | `unknown`, `below_surface`, or `above_bed`; confirm from metadata |
+| coops_adcp_orientation | `unknown`, `upward`, or `downward`; controls the physical CO-OPS bin order |
+| coops_nominal_water_depth_m | Nominal deployment depth, m, or `null`; LIS1016 preset: 47.0 |
+| coops_instrument_height_above_bed_m | Instrument elevation above bed, m, or `null`; LIS1016 preset: 5.18 |
+| coops_bin1_center_distance_m | Distance from the instrument to bin-1 center, m, or `null`; LIS1016 preset: 4.23 |
+| coops_bin_size_m | Measurement-cell spacing, m, or `null`; LIS1016 preset: 2.0 |
 | verdant_sheets | Sheet names corresponding to alphabetically sorted workbooks |
 | verdant_heading_offsets | Matching heading corrections in degrees; Station B `[-5.53, 3.2]`, Station A `[-0.07, 0.04]` |
 | excluded_bins | Integer bin IDs to exclude; Verdant Station B excludes 45–49, Station A 39–43 (see Verdant stations) |
 | max_speed_mps | Maximum accepted horizontal speed, m/s |
 | min_bin_coverage | Fraction of selected bins required for a valid depth average, (0,1] |
-| water_depth_m | Total water depth at the ADCP in metres, or `null`. Known sites: Verdant Station A 24.0, Station B 26.9; CO-OPS LIS1016 37.8 (124 ft, [NOAA station page](https://tidesandcurrents.noaa.gov/noaacurrents/predictions.html?id=LIS1016_1)) |
+| water_depth_m | Total water depth at the ADCP in metres, or `null`. Known sites: Verdant Station A 24.0, Station B 26.9; CO-OPS LIS1016 47.18 from [NOAA deployment metadata](https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/LIS1016/deployments.json) |
 
 ## Flow, cycles, profiles and variability
 

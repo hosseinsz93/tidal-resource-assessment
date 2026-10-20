@@ -1,5 +1,13 @@
 # Consolidation validation — 29 September 2026
 
+17 October 2026 LIS1016 geometry revision: the loader now applies NOAA's verified upward-looking
+deployment geometry, maps the 21.76 m cell to bin 9, converts all 17 cells to 9.41--41.42 m
+above bed, and checks surface-depth and instrument-geometry calculations within 0.05 m. Physical
+power-law fits run for both phases. The LIS1016 preset uses a 30% near-bed interval so the lowest
+three cells support the physical log-law fit. Syntax compilation and full-record preprocessing,
+phase projection, and physical profile-fit checks passed in the available bundled runtime; the
+runtime did not include pytest or SciPy, so the complete automated suite was not rerun in this session.
+
 7 October 2026 polar-figure revision: 32 tests pass. The new `tidal_velocity_polar`
 figure was rendered and visually inspected with CO-OPS LIS1016 and Verdant Stations A
 and B. The standard figure exporter was also checked to place it immediately after
@@ -27,4 +35,4 @@ Regression cases cover unit conversion, heading rotation, true bed geometry, arb
 
 Testing used an isolated Python 3.12 environment with pandas, NumPy, Matplotlib, openpyxl and Jupyter dependencies. The pre-existing local Conda environment could not be launched from this session; it was not modified. The repository's environment file and setup instructions include the new notebook dependencies.
 
-Completed example runs are retained under matching folders in `outputs/csv/` and `outputs/figures/`. Run logs (`run_log.json`) contain exact dependency versions, settings and hashes. These are workflow integration checks, not independent validation of site resource estimates or IEC compliance. Physical log-law fits remain unestimated with default unknown water depth; CO-OPS physical profile fits also await confirmation of its depth datum.
+Completed example runs are retained under matching folders in `outputs/csv/` and `outputs/figures/`. Run logs (`run_log.json`) contain exact dependency versions, settings and hashes. These are workflow integration checks, not independent validation of site resource estimates or IEC compliance. Unknown sites still require confirmed vertical metadata; LIS1016 physical profile fits use the verified NOAA deployment and bin metadata.
