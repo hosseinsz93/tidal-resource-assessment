@@ -23,6 +23,21 @@ def synthetic(tmp_path, bins=4):
     return frame, cfg
 
 
+def test_ragged_record_edges_are_trimmed_to_common_bins(tmp_path):
+    frame, cfg = synthetic(tmp_path)
+    times = sorted(frame.time.unique())
+    first, last, middle = times[0], times[-1], times[300]
+    # Bins 3-4 lack the first sample, bin 4 lacks the last, and bin 2 lacks one interior sample.
+    ragged = frame[~(((frame.time == first) & frame.bin.isin([3, 4]))
+                     | ((frame.time == last) & (frame.bin == 4))
+                     | ((frame.time == middle) & (frame.bin == 2)))]
+    dataset = validate_dataset(Dataset(ragged.copy()), cfg)
+    counts = dataset.data.groupby("bin").size()
+    assert dataset.data.time.min() == times[1] and dataset.data.time.max() == times[-2]
+    assert counts.to_dict() == {1: 598, 2: 597, 3: 598, 4: 598}
+    assert dataset.metadata["quality_control"]["edge_rows_trimmed"] == 5
+
+
 @pytest.mark.parametrize("unit", ["ns", "us", "ms"])
 def test_time_support_does_not_count_gaps_or_depend_on_storage_unit(unit):
     times = pd.DatetimeIndex(["2024-01-01 00:00", "2024-01-01 00:06", "2024-01-01 02:00", "2024-01-01 02:06"]).as_unit(unit)

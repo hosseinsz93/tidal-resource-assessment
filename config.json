@@ -1,13 +1,13 @@
 {
   "data_and_quality": {
-    "source": "verdant",
-    "site": "Verdant_B",
-    "input_path": "inputs/verdant/",
+    "source": "coops",
+    "site": "LIS1016",
+    "input_path": "inputs/coops/depth_bins",
     "time_zone": "EST",
     "coops_depth_reference": "unknown",
     "verdant_sheets": [
-      "Station B",
-      "Station B-2"
+      "Station A",
+      "Station A-2"
     ],
     "max_speed_mps": 6.0,
     "min_bin_coverage": 1.0

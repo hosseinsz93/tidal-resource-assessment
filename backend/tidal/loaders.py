@@ -193,6 +193,18 @@ def validate_dataset(dataset, settings):
     if unknown:
         raise ValueError(f"Excluded bins are not present: {sorted(unknown)}.")
     frame = frame[~frame.bin.isin(settings.excluded_bins)].copy()
+    # Per-bin files can start or end one sample apart; trim only those ragged record edges.
+    bins_per_time = frame.groupby("time").bin.nunique().sort_index()
+    complete = bins_per_time.index[bins_per_time == frame.bin.nunique()]
+    edge_trimmed = 0
+    if len(complete):
+        inside = frame.time.between(complete.min(), complete.max())
+        edge_trimmed = int((~inside).sum())
+        if edge_trimmed:
+            dropped = [str(pd.Timestamp(t)) for t in sorted(frame.loc[~inside, "time"].unique())]
+            dataset.messages.append(f"Trimmed {len(dropped)} record-edge timestamp(s) not present in every bin: "
+                                    f"{', '.join(dropped[:5])}{' …' if len(dropped) > 5 else ''}.")
+            frame = frame[inside].copy()
     speed = np.hypot(frame.east_mps, frame.north_mps)
     invalid = ~np.isfinite(speed) | (speed > settings.max_speed_mps)
     frame["valid_velocity"] = ~invalid
@@ -228,7 +240,8 @@ def validate_dataset(dataset, settings):
         raise ValueError("At least three distinct timestamps are needed.")
     dataset.metadata["quality_control"] = {
         "input_rows": original, "rows_without_time_bin_depth": invalid_metadata,
-        "identical_duplicates_removed": n_duplicates, "invalid_velocity_rows": int(invalid.sum()),
+        "identical_duplicates_removed": n_duplicates, "edge_rows_trimmed": edge_trimmed,
+        "invalid_velocity_rows": int(invalid.sum()),
         "retained_rows": len(frame), "retained_bins": int(frame.bin.nunique()),
     }
     if invalid.any():
