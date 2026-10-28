@@ -30,16 +30,50 @@ bearing, depth metadata and turbine assumptions):
 Verdant sheet names and heading offsets are already present in the global file. Parameters
 specific to an inactive source are ignored. Slack is derived automatically from cut-in.
 
+## Water depth
+
+Add the total water depth at the ADCP in `data_and_quality.water_depth_m`, in metres. Only
+one value is active at a time; change it whenever you switch source or Verdant station. Use
+`null` if the depth is unknown (physical log-law fits are then skipped). Station presets
+fill this field automatically for LIS1016 and the Verdant sheets. Heights below are height
+above bed (HAB).
+
+| Site | `water_depth_m` | Reported bins | Retained HAB | Source |
+|---|---|---|---|---|
+| Verdant Station A | `24.0` | 43 (1.67–22.67 m) | bins 1–38, 1.67–20.17 m | ADCP workbook geometry |
+| Verdant Station B (current `config.json`) | `26.9` | 49 (1.67–25.67 m) | bins 1–44, 1.67–23.17 m | ADCP workbook geometry |
+| CO-OPS LIS1016 | `47.18` | 17 (9.41–41.42 m) | all 17 bins, 9.41–41.42 m | Pressure-derived NOAA depth |
+
+For a new site, enter the confirmed deployment or station depth and geometry.
+
 ### CO-OPS LIS1016
 
 When `source` is `coops` and `site` is `LIS1016`, the loader applies the verified NOAA
-deployment metadata automatically. It uses an upward-looking orientation, pressure-derived
-water depth of 47.18 m, instrument height of 5.18 m above bed, 4.23 m from the instrument to
-the center of bin 1, a 2.0 m bin size, and a 250 degree flood reference. Bin numbers therefore
-increase upward from the bed: bin 1 is the 37.77 m depth-below-surface cell and bin 9 is the
-21.76 m cell. Heights are calculated as `47.18 - depth_m`, giving 9.41--41.42 m above bed,
-and are checked against the independent instrument-geometry calculation. The preset uses
-`near_bed_fraction = 0.30`, which includes the lowest three cells in the physical log-law fit.
+deployment metadata automatically. LIS1016 is at 41.18945°N, 72.36960°W (Cornfield Point,
+4 miles south of Buoy CF). NOAA identifies a four-beam, 300 kHz Teledyne RDI Workhorse ADCP,
+upward-looking, 5.18 m above the seabed. Nominal water depth is 47.0 m; the pressure-derived
+measured depth used for heights is 47.18 m. Valid observations run from 9 June to 27 July
+2010 at a 360 s (6 min) interval. The flood-reference bearing is 250°.
+
+The deployment has 17 cells of 2.0 m, with the centre of bin 1 located 4.23 m above the
+instrument. NOAA reports cell depths from 37.77 m to 5.76 m below the surface. Bin numbers
+increase upward from the bed: bin 1 is the 37.77 m depth-below-surface cell. Heights are
+
+```
+z_i = 47.18 − d_i
+```
+
+where `d_i` is the NOAA depth below the surface, giving 9.41–41.42 m HAB. The same
+coordinate is reconstructed from the instrument geometry as
+
+```
+z_i = 5.18 + 4.23 + 2.0 × (i − 1)
+```
+
+The two calculations agree within 0.01 m. For example, the cell at 21.76 m below the
+surface is bin 9 and lies 25.42 m above the bed. The preset uses `near_bed_fraction = 0.30`,
+which includes the lowest three cells in the physical log-law fit.
+
 See the official [deployment metadata](https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/LIS1016/deployments.json)
 and [bin metadata](https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/LIS1016/bins.json).
 
@@ -62,8 +96,22 @@ Exported run folders, CSV names and figure files include the station tag
 (`StationA` or `StationB`), e.g. `outputs/csv/Verdant_A_verdant_StationA_<timestamp>/`
 and `StationA_energy_bins.csv`. Figure titles also show the station.
 
-Station B has 49 bins (about 1.67–25.67 m). Station A has 43 bins (about 1.67–22.67 m).
-The excluded bins are the uppermost, near-surface bins. Their valid-velocity fraction falls
+The Verdant workbooks give each cell as both distance above the bed and distance from the
+ADCP head. At Stations A and B the centre of bin 1 is 1.67 m above the bed and 1.21 m from
+the instrument head, so the head sits 0.46 m above the bed. Cells are spaced 0.50 m:
+
+```
+z_i = 1.67 + 0.50 × (i − 1)
+```
+
+Station A reports 43 bins spanning 1.67–22.67 m HAB. Station B reports 49 bins spanning
+1.67–25.67 m HAB. The upper five bins at each station are excluded to limit near-surface
+interference (bins 39–43 at A, 45–49 at B). Retained profiles are therefore bins 1–38
+(1.67–20.17 m) at Station A and bins 1–44 (1.67–23.17 m) at Station B. Total water depths
+of 24.0 m and 26.9 m are used when normalizing by water-column depth. Both records run
+from 23 October 2024 to 15 February 2025 at a 10 min interval.
+
+The excluded bins are the uppermost, near-surface cells. Their valid-velocity fraction falls
 below 100% in at least one deployment period, usually from changing water level or surface
 interference. The second deployment loses more near the surface than the first.
 
@@ -125,7 +173,7 @@ omitted optional fields use backend defaults. Slack is derived from cut-in, not 
 | excluded_bins | Integer bin IDs to exclude; Verdant Station B excludes 45–49, Station A 39–43 (see Verdant stations) |
 | max_speed_mps | Maximum accepted horizontal speed, m/s |
 | min_bin_coverage | Fraction of selected bins required for a valid depth average, (0,1] |
-| water_depth_m | Total water depth at the ADCP in metres, or `null`. Known sites: Verdant Station A 24.0, Station B 26.9; CO-OPS LIS1016 47.18 from [NOAA deployment metadata](https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/LIS1016/deployments.json) |
+| water_depth_m | Total water depth at the ADCP in metres, or `null`. Known sites: Verdant Station A 24.0 (retained HAB 1.67–20.17 m), Station B 26.9 (retained HAB 1.67–23.17 m); CO-OPS LIS1016 47.18 (HAB 9.41–41.42 m) from [NOAA deployment metadata](https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/LIS1016/deployments.json) |
 
 ## Flow, cycles, profiles and variability
 
@@ -190,3 +238,32 @@ Changing `source` alone does not change other settings. Review headings, depth m
 Preprocess reloads the saved JSON; rerun all three stages after edits. Result exploration
 can remain interactive, but configuration requires no widgets. Every run preserves the
 effective settings in its run log (`run_log.json`) and exports the selected curve as CSV.
+
+## Analyses and conventions
+
+The JSON file accepts cut-in, rated speed, cut-off speed, and rated power.
+Slack always uses the cut-in threshold, including when energy estimation is disabled.
+Choose a CSV curve, edit the JSON speed–power pairs, or generate an
+idealized cubic-rise/rated-plateau curve. Review the exported curve; revised points are
+stored in the run settings and exported curve. Rated speed shapes generated curves;
+CSV/edited points retain their supplied shape. Cut-in/cut-off apply to every curve.
+Velocity profiles show negative ebb on the left and positive flood on the right.
+
+- Unit/metadata validation, duplicate/overlap checks, depth-bin coverage and gap detection.
+- True-bearing channel axes calculated by PCA or doubled-angle directions; a flood-end hint only labels which end is flood.
+- One phase label per timestamp: positive along-channel = flood; negative = ebb; missing remains missing. Depth-resolved analyses inherit the same label.
+- Gap-aware cycle segmentation, normalized ensemble cycles and harmonic fits.
+- Phase-mean vertical profiles and separate event-peak profiles; power/log fits when physical height metadata support them.
+- Rolling-residual intensity by depth/phase, with optional supplied instrument-noise variance subtraction.
+- Time-weighted hub-bin speed distributions, power-curve integration and single-turbine AEP (IEC TS 62600-200, 8,766 h/yr).
+- Consistent red flood / blue ebb / grey slack figures, with bin/phase/time exploration. The
+  tidal-velocity polar figure follows the principal-flow diagnostics and shows valid bin vectors,
+  the bidirectional principal axis, phase-mean bearings and phase-mean speeds for every source.
+
+The example flood reference and turbine are specific to Long Island Sound. Check these for a new site. The backend uses named columns rather than legacy positional layouts. Depth averages are arithmetic vector means over measured bins. Sample weights assume ensemble-start timestamps, cap support across large gaps at nominal cadence, and assign one nominal interval to the last record.
+
+**Scientific scope:** six/ten-minute averaged velocities provide resolved variability, not full burst-scale turbulence. The workflow does not infer a noise floor spectrally from these coarse records. Unknown depth datum is never guessed from velocity gradients; unsupported physical fits are skipped. LIS1016 uses verified NOAA deployment geometry. Log fitting requires total water depth and three near-bed points. AEP assumes a representative annual distribution. This implementation is not an IEC certification.
+
+Original normalized profile fits and original TI definitions are retained separately from physical-coordinate fits and newer residual-intensity measures; legacy inferred coordinates are not physical bed geometry.
+
+Annual CO-OPS event predictions are **not** ADCP observations. Their original station/cycle comparisons are available as optional diagnostics, separate from measured resource and energy calculations. Arbitrary instrument file formats require conversion to the [standard CSV](inputs/custom/README.md) or a new source adapter.
